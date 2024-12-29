@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2015",
+    "module": "none",
+    "moduleResolution": "node",
+    "isolatedModules": false,
+    "noEmitOnError": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "incremental": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strictNullChecks": true,
+    "outDir": "../../dist",
+    "rootDir": ".."
+  },
+  "exclude": ["../server/**/*"]
+}

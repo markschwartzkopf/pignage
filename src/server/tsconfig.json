@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/node18/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "../../dist",
+    "rootDir": "..",
+    "types": ["node"] // Ensure Node.js types are included
+  },
+  "exclude": ["../browser/**/*"]
+}
