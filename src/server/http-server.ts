@@ -1,13 +1,18 @@
 import http from 'http';
-import fs from 'fs/promises';
+import fs from 'fs';
 import { exec } from 'child_process';
 import os from 'os';
 import path from 'path';
 import { WebSocket } from 'ws';
 import { ClientMessage, ServerMessage } from '../global-types';
-import { getGroups, renameGroup, setSlideDelay } from './file-manager';
+import {
+  getGroups,
+  renameGroup,
+  repopulateGroup,
+  setSlideDelay,
+} from './file-manager';
 import { log } from './logger';
-import { updateGroupInfo } from './data';
+import { updateGroupInfo, updateStateInfo } from './data';
 
 const connections: WebSocket[] = [];
 let activeSlide: [string, string] | null = null;
@@ -64,30 +69,85 @@ export function initializeServer() {
   log('server', 'info', 'Starting server on port ' + port);
   const httpServer = http
     .createServer((req, res) => {
-      let filePath = '.' + req.url;
-      if (filePath == './') {
-        filePath = './index.html';
-      }
-      const fileExtention = String(path.extname(filePath)).toLowerCase();
-      let contentType = 'text/html';
-      if (fileExtention in mimeTypes)
-        contentType = mimeTypes[fileExtention as keyof typeof mimeTypes];
-      const localPath = path.join(STATIC_PATH, filePath);
-      fs.readFile(localPath)
-        .then((buf) => {
-          res.writeHead(200, { 'Content-Type': contentType });
-          res.end(buf, 'utf-8');
-        })
-        .catch((err) => {
-          if (err.code && err.code === 'ENOENT') {
-            log('server', 'error', `Missing file requested at ${localPath}`);
-            res.writeHead(404, { 'Content-Type': 'text/html' });
-            res.end('File not found', 'utf-8');
-          } else {
-            res.writeHead(500, { 'Content-Type': 'text/html' });
-            res.end('Unknown error: ' + JSON.stringify(err), 'utf-8');
+      switch (req.method) {
+        case 'POST': {
+          const filePath = '.' + req.url;
+          const localPath = path.join(STATIC_PATH, 'groups', filePath);
+          console.log(`File upload request: ${localPath}`);
+          if (!req.headers['content-type']) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('No content type header found');
+            break;
           }
-        });
+          const chunks: Buffer[] = [];
+
+          req.on('data', (chunk) => {
+            chunks.push(chunk);
+          });
+          req.on('end', () => {
+            const buffer = Buffer.concat(chunks);
+            const headerEndIndex = buffer.indexOf('\r\n\r\n') + 4;
+            const fileBuffer = buffer.subarray(headerEndIndex);
+            fs.promises
+              .writeFile(localPath, fileBuffer)
+              .then(() => {
+                repopulateGroup(filePath.split('/')[1]);
+                log('server', 'info', 'File upload complete');
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end('File uploaded successfully');
+              })
+              .catch((err) => {
+                log('server', 'error', `Error writing file: ${err}`);
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end('Error writing file');
+              });
+          });
+
+          req.on('error', (err) => {
+            log(
+              'server',
+              'error',
+              `Error receiving file: ${JSON.stringify(err)}`
+            );
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Error uploading file');
+          });
+
+          break;
+        }
+        case 'GET': {
+          let filePath = '.' + req.url;
+          if (filePath == './') {
+            filePath = './index.html';
+          }
+          const fileExtention = String(path.extname(filePath)).toLowerCase();
+          let contentType = 'text/html';
+          if (fileExtention in mimeTypes)
+            contentType = mimeTypes[fileExtention as keyof typeof mimeTypes];
+          const localPath = path.join(STATIC_PATH, filePath);
+          fs.promises
+            .readFile(localPath)
+            .then((buf) => {
+              res.writeHead(200, { 'Content-Type': contentType });
+              res.end(buf, 'utf-8');
+            })
+            .catch((err) => {
+              if (err.code && err.code === 'ENOENT') {
+                log(
+                  'server',
+                  'error',
+                  `Missing file requested at ${localPath}`
+                );
+                res.writeHead(404, { 'Content-Type': 'text/html' });
+                res.end('File not found', 'utf-8');
+              } else {
+                res.writeHead(500, { 'Content-Type': 'text/html' });
+                res.end('Unknown error: ' + JSON.stringify(err), 'utf-8');
+              }
+            });
+          break;
+        }
+      }
     })
     .listen(port, () => {
       log('server', 'info', `Http server started on port ${port}`);
@@ -112,23 +172,7 @@ export function initializeServer() {
             const msg = JSON.parse(message.toString()) as ClientMessage;
             switch (msg.type) {
               case 'activeSlide': {
-                if (!msg.slide) {
-                  activeSlide = null;
-                  sendMessage({ type: 'activeSlide', slide: null });
-                  break;
-                }
-                const realSlide = msg.slide;
-                const groups = getGroups();
-                const group = groups.find((g) => g.name === realSlide[0]);
-                if (group && group.files.find((f) => f.name === realSlide[1])) {
-                  activeSlide = msg.slide;
-                  sendMessage({ type: 'activeSlide', slide: msg.slide });
-                } else
-                  log(
-                    'server',
-                    'error',
-                    `Requested slide not found: ${msg.slide[0]}/${msg.slide[1]}`
-                  );
+                setActiveSlide(msg.slide);
                 break;
               }
               case 'log':
@@ -189,18 +233,22 @@ function sendMessage(message: ServerMessage, socket?: WebSocket) {
 }
 
 let playGroupInterval: NodeJS.Timeout | null = null;
-function playGroup(groupName: string | null) {
+export function playGroup(groupName: string | null) {
   if (playGroupInterval) {
     clearInterval(playGroupInterval);
     playGroupInterval = null;
   }
   if (!groupName) {
     playingGroup = null;
+    updateStateInfo();
     sendMessage({ type: 'playingGroup', group: null });
     return;
   }
   const maybeGroup = getGroups().find((g) => g.name === groupName);
   if (!maybeGroup || maybeGroup.files.length === 0) {
+    playingGroup = null;
+    updateStateInfo();
+    sendMessage({ type: 'playingGroup', group: null });
     log(
       'server',
       'error',
@@ -213,12 +261,14 @@ function playGroup(groupName: string | null) {
     maybeGroup.files.length === 0
   ) {
     playingGroup = null;
+    updateStateInfo();
     sendMessage({ type: 'playingGroup', group: null });
     return;
   }
   playingGroup = groupName;
-  const group = maybeGroup;
+  updateStateInfo();
   sendMessage({ type: 'playingGroup', group: groupName });
+  const group = maybeGroup;
   if (group.files.length === 1) {
     activeSlide = [group.name, group.files[0].name];
     sendMessage({
@@ -249,6 +299,36 @@ function playGroup(groupName: string | null) {
     }, curGroup.slideDelay * 1000);
   }
   nextSlide(slideIndex, group.name);
+}
+
+export function setActiveSlide(slide: [string, string] | null) {
+  if (!slide) {
+    activeSlide = null;
+    updateStateInfo();
+    sendMessage({ type: 'activeSlide', slide: null });
+    return;
+  }
+  const realSlide = slide;
+  const groups = getGroups();
+  const group = groups.find((g) => g.name === realSlide[0]);
+  if (group && group.files.find((f) => f.name === realSlide[1])) {
+    activeSlide = realSlide;
+    updateStateInfo();
+    sendMessage({ type: 'activeSlide', slide: realSlide });
+  } else
+    log(
+      'server',
+      'error',
+      `Requested slide not found: ${realSlide[0]}/${realSlide[1]}`
+    );
+}
+
+export function getPlayingGroup() {
+  return playingGroup;
+}
+
+export function getActiveSlide() {
+  return JSON.parse(JSON.stringify(activeSlide)) as [string, string] | null;
 }
 
 export function refreshGroups() {

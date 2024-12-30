@@ -6,8 +6,9 @@ import {
   ServerMessage,
 } from '../global-types';
 const svgNS = 'http://www.w3.org/2000/svg'; // SVG namespace
-const playPolygon = `<polygon points="5 3 19 12 5 21 5 3"></polygon>`;
-const pausePolygon = `<rect x="3" y="3" width="6" height="18"></rect><rect x="15" y="3" width="6" height="18"></rect>`;
+const playIconSvg = `<polygon points="5 3 35 20 5 37 5 3"></polygon>`;
+const pauseIconSvg = `<rect x="3" y="3" width="12" height="34"></rect><rect x="25" y="3" width="12" height="34"></rect>`;
+const uploadIconSvg = `<rect x="3" y="25.5" width="20" height="11.25"/><path d="M3 35.5l7 -7l7 7l3 -3l3 3"/><path d="M16 30.5h4a1 1 0 0 0 0 -2h-1.5a 1 1 0 0 0 -2 0h-0.5a1 1 0 0 0 0 2"/><path d="M7 31.5a2.5 2.5 0 1 1 2.5 -2.5z" fill="white" stroke="none"/><path d="M16 19h22v-14a1 1 0 0 0 -1 -1h-14a1.2 1.2 0 0 1 -1 -0.7l-0.5 -1a1.2 1.2 0 0 0 -1 -0.7h-3.5a1 1 0 0 0 -1 1z"/><path d="M13 12h 15v15l-5 -5l-10 10l-5 -5l10 -10z" fill="black"/>`;
 
 let groups: (FileGroup & { scrollEl?: HTMLElement; playEl?: SVGElement })[] =
   [];
@@ -15,41 +16,54 @@ let activeSlideIndicator: HTMLElement | null = null;
 let activeSlide: [string, string] | null = null;
 let playingGroup: string | null = null;
 
-const socket = new WebSocket(window.location.href.replace(/^http/, 'ws'));
-socket.onmessage = (event) => {
-  if (typeof event.data === 'string') {
-    try {
-      const message: ServerMessage = JSON.parse(event.data);
-      switch (message.type) {
-        case 'groups':
-          groups = message.groups;
-          populateGroups();
-          setActiveSlide();
-          break;
-        case 'activeSlide': {
-          activeSlide = message.slide;
-          setActiveSlide();
-          break;
+let socket: WebSocket | null = null;
+function connect() {
+  socket = new WebSocket(window.location.href.replace(/^http/, 'ws'));
+  socket.onopen = () => {
+    console.log('WebSocket opened');
+  };
+  socket.onmessage = (event) => {
+    if (typeof event.data === 'string') {
+      try {
+        const message: ServerMessage = JSON.parse(event.data);
+        switch (message.type) {
+          case 'groups':
+            groups = message.groups;
+            populateGroups();
+            setActiveSlide();
+            break;
+          case 'activeSlide': {
+            activeSlide = message.slide;
+            setActiveSlide();
+            break;
+          }
+          case 'playingGroup': {
+            playingGroup = message.group;
+            groups.forEach((group) => {
+              if (group.name === message.group) {
+                if (group.playEl) group.playEl.innerHTML = pauseIconSvg;
+              } else {
+                if (group.playEl) group.playEl.innerHTML = playIconSvg;
+              }
+            });
+            break;
+          }
+          default:
+            log('error', 'Unknown message type:', message);
         }
-        case 'playingGroup': {
-          playingGroup = message.group;
-          groups.forEach((group) => {
-            if (group.name === message.group) {
-              if (group.playEl) group.playEl.innerHTML = pausePolygon;
-            } else {
-              if (group.playEl) group.playEl.innerHTML = playPolygon;
-            }
-          });
-          break;
-        }
-        default:
-          log('error', 'Unknown message type:', message);
+      } catch (err) {
+        log('error', 'Error parsing message:', err);
       }
-    } catch (err) {
-      log('error', 'Error parsing message:', err);
     }
-  }
-};
+  };
+  socket.onclose = () => {
+    console.error('Socket closed');
+    socket = null;
+  };
+}
+setInterval(() => {
+  if (!socket) connect();
+}, 1000);
 
 function setActiveSlide() {
   if (!activeSlide) {
@@ -116,13 +130,56 @@ function populateGroups() {
       }
     };
     header.appendChild(title);
+    const uploadIcon = document.createElementNS(svgNS, 'svg');
+    uploadIcon.classList.add('svg-icon');
+    uploadIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    uploadIcon.setAttribute('viewBox', '0 0 40 40');
+    uploadIcon.setAttribute('fill', 'none');
+    uploadIcon.setAttribute('stroke', '#ffffff');
+    uploadIcon.setAttribute('stroke-width', '2');
+    uploadIcon.innerHTML = uploadIconSvg;
+    uploadIcon.onclick = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+      input.onchange = async () => {
+        if (input.files) {
+          const uploadUrl = `${window.location.origin}/${group.name}`;
+          console.log('Uploading files to:', uploadUrl);
+          const files = Array.from(input.files);
+          for (const file of files) {
+            const formData = new FormData();
+            formData.append('files', file);
+            try {
+              const response = await fetch(`${uploadUrl}/${file.name}`, {
+                method: 'POST',
+                body: formData,
+              });
+
+              if (response.ok) {
+                alert('File uploaded successfully!');
+              } else {
+                log('error', `Failed to upload file: ${response.statusText}`);
+                alert('Failed to upload file');
+              }
+            } catch (err) {
+              log('error', 'Error uploading file:', err);
+              alert('An error occurred while uploading the file');
+            }
+          }
+        }
+      };
+      input.click();
+    };
+    header.appendChild(uploadIcon);
     const playIcon = document.createElementNS(svgNS, 'svg');
     playIcon.classList.add('svg-icon');
     playIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    playIcon.setAttribute('viewBox', '0 0 24 24');
+    playIcon.setAttribute('viewBox', '0 0 40 40');
     playIcon.setAttribute('fill', '#ffffff');
     playIcon.setAttribute('stroke', '#ffffff');
-    playIcon.innerHTML = playPolygon;
+    playIcon.innerHTML = playIconSvg;
     playIcon.onclick = () => {
       if (playingGroup === group.name) {
         sendMessage({ type: 'playGroup', group: null });
@@ -179,19 +236,14 @@ function populateGroups() {
     delayUnit.textContent = 'sec';
     delay.appendChild(delayUnit);
     groupElement.appendChild(delay);
-
     slideGroups.appendChild(groupElement);
   });
 }
 
 function sendMessage(message: ClientMessage) {
-  if (socket.readyState === WebSocket.OPEN) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message));
-  } else
-    console.error(
-      "Socket not open, can't send message. Socket.readystate:",
-      socket.readyState
-    );
+  } else console.error(`Socket not open, can't send message`);
 }
 
 let localLogNumber = 0;

@@ -1,12 +1,25 @@
 import fs from 'fs';
 import { log } from './logger';
 import { getGroups, setSlideDelay } from './file-manager';
+import {
+  getActiveSlide,
+  getPlayingGroup,
+  playGroup,
+  setActiveSlide,
+} from './http-server';
 
 const initGroupInfo: {
   [k: string]: {
     slideDelay: number;
   };
 } = {};
+const initStateInfo: {
+  activeSlide: [string, string] | null;
+  playingGroup: string | null;
+} = {
+  activeSlide: null,
+  playingGroup: null,
+};
 
 export function initializeData() {
   //data directory
@@ -20,32 +33,55 @@ export function initializeData() {
       });
     })
     .then(() => {
-      return fs.promises
-        .readFile('./data/groupinfo.json')
-        .then((data) => {
-          log('server', 'info', 'reading group info file');
-          const groupInfo = JSON.parse(data.toString());
-          const groups = getGroups();
-          Object.keys(groupInfo).forEach((key) => {
-            const group = groups.find((g) => g.name === key);
-            if (group) {
-              setSlideDelay(key, groupInfo[key].slideDelay, 'fromFile');
-            }
-          });
-        })
-        .catch(async () => {
-          log('server', 'error', 'creating group info file');
-          return fs.promises.writeFile(
-            dataDir + '/groupinfo.json',
-            JSON.stringify(initGroupInfo)
-          );
-        })
+      return fs.promises.readFile('./data/groupinfo.json');
+    })
+    .then((data) => {
+      log('server', 'info', 'reading group info file');
+      const groupInfo = JSON.parse(data.toString()) as typeof initGroupInfo;
+      const groups = getGroups();
+      Object.keys(groupInfo).forEach((key) => {
+        const group = groups.find((g) => g.name === key);
+        if (group) {
+          setSlideDelay(key, groupInfo[key].slideDelay, 'fromFile');
+        }
+      });
+    })
+    .catch(() => {
+      log('server', 'warn', 'Group info file does not exist. Creating it...');
+      fs.promises
+        .writeFile(dataDir + '/groupinfo.json', JSON.stringify(initGroupInfo))
         .catch((err) => {
-          log('server', 'error', 'Error initializing data:', err);
+          log('server', 'error', 'Error initializing group info:', err);
         });
     })
+    .then(() => {
+      return fs.promises.readFile('./data/stateinfo.json');
+    })
+    .then((data) => {
+      log('server', 'info', 'reading state info file');
+      const stateInfo = JSON.parse(data.toString()) as typeof initStateInfo;
+      setActiveSlide(stateInfo.activeSlide);
+      playGroup(stateInfo.playingGroup);
+    })
+    .catch(() => {
+      log('server', 'warn', 'State info file does not exist. Creating it...');
+      fs.promises
+        .writeFile(dataDir + '/stateinfo.json', JSON.stringify(initStateInfo))
+        .catch((err) => {
+          log('server', 'error', 'Error initializing state info:', err);
+        });
+    });
+}
+
+export function updateStateInfo() {
+  const stateInfo = {
+    activeSlide: getActiveSlide(),
+    playingGroup: getPlayingGroup(),
+  };
+  fs.promises
+    .writeFile('./data/stateinfo.json', JSON.stringify(stateInfo))
     .catch((err) => {
-      log('server', 'error', 'Error initializing data:', err);
+      log('server', 'error', 'Error updating state info:', err);
     });
 }
 

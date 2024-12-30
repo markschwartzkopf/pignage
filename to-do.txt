@@ -1,0 +1,5 @@
+clicking a picture in not-playing group stops the playing group
+add groups
+delete files & groups
+de-uglify UI
+Google drive integration

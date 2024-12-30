@@ -200,3 +200,24 @@ export function setSlideDelay(
   group.slideDelay = delay;
   if (!fromFile) refreshGroups();
 }
+
+export function repopulateGroup(groupName: string) {
+  console.log(
+    `repopulating group "${groupName}", Path: ${path.join(
+      groupDirectory,
+      groupName
+    )}`
+  );
+  const group = groups.find((g) => g.name === groupName);
+  if (!group) {
+    log('server', 'error', `Group "${groupName}" not found.`);
+    return;
+  }
+  populateGroup(path.join(groupDirectory, groupName), group)
+    .then(() => {
+      refreshGroups();
+    })
+    .catch((err) => {
+      log('server', 'error', `Error repopulating group "${groupName}"`, err);
+    });
+}
