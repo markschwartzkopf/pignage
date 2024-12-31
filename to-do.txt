@@ -1,5 +1,7 @@
 clicking a picture in not-playing group stops the playing group
+clicking a picture in the playing group advances play to that picture
 add groups
 delete files & groups
+reboot button
 de-uglify UI
 Google drive integration
