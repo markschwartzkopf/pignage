@@ -79,11 +79,28 @@
       .slide-delay {
         margin-top: 0.25em;
       }
+      iframe {
+        border: 1vh solid white;
+        border-radius: 1vh;
+        background-color: none;
+        width: 30vh;
+        height: 30vh;
+        pointer-events: none;
+      }
+      .centering-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+      }
     </style>
   </head>
   <body>
     <div class="header">Slide Groups</div>
     <div id="slide-groups"></div>
+    <div class="centering-container">
+      <iframe src="display.html"></iframe>
+    </div>
   </body>
   <script>
     let exports = {};

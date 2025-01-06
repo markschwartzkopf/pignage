@@ -6,6 +6,11 @@ import {
   ServerMessage,
 } from '../global-types';
 
+if (window.self !== window.top) {
+  document.body.classList.add('inside-iframe');
+  document.documentElement.classList.add('inside-iframe');
+}
+
 type clientFile = FileGroup['files'][number] & { element: HTMLElement };
 type clientFileGroup = {
   name: string;
