@@ -233,6 +233,8 @@ function sendMessage(message: ServerMessage, socket?: WebSocket) {
 }
 
 let playGroupInterval: NodeJS.Timeout | null = null;
+
+let slideIndex = -1;
 export function playGroup(groupName: string | null) {
   if (playGroupInterval) {
     clearInterval(playGroupInterval);
@@ -277,28 +279,29 @@ export function playGroup(groupName: string | null) {
     });
     return;
   }
-  let slideIndex = -1;
+  slideIndex = -1;
   if (activeSlide && activeSlide[0] === group.name) {
     const fileName = activeSlide[1];
     slideIndex = group.files.findIndex((f) => f.name === fileName);
   }
-  function nextSlide(slideIndex: number, name: string) {
-    const curGroup = getGroups().find((g) => g.name === name);
-    if (!curGroup || curGroup.files.length === 0) {
-      log('server', 'error', `Group not found: "${name}"`);
-      return;
-    }
-    slideIndex = (slideIndex + 1) % curGroup.files.length;
-    activeSlide = [name, curGroup.files[slideIndex].name];
-    sendMessage({
-      type: 'activeSlide',
-      slide: [name, curGroup.files[slideIndex].name],
-    });
-    playGroupInterval = setTimeout(() => {
-      nextSlide(slideIndex, name);
-    }, curGroup.slideDelay * 1000);
+  nextSlide(group.name);
+}
+
+function nextSlide(groupName: string) {
+  const curGroup = getGroups().find((g) => g.name === groupName);
+  if (!curGroup || curGroup.files.length === 0) {
+    log('server', 'error', `Group not found: "${groupName}"`);
+    return;
   }
-  nextSlide(slideIndex, group.name);
+  slideIndex = (slideIndex + 1) % curGroup.files.length;
+  activeSlide = [groupName, curGroup.files[slideIndex].name];
+  sendMessage({
+    type: 'activeSlide',
+    slide: [groupName, curGroup.files[slideIndex].name],
+  });
+  playGroupInterval = setTimeout(() => {
+    nextSlide(groupName);
+  }, curGroup.slideDelay * 1000);
 }
 
 export function setActiveSlide(slide: [string, string] | null) {
@@ -312,6 +315,19 @@ export function setActiveSlide(slide: [string, string] | null) {
   const groups = getGroups();
   const group = groups.find((g) => g.name === realSlide[0]);
   if (group && group.files.find((f) => f.name === realSlide[1])) {
+    if (playGroupInterval) {
+      clearInterval(playGroupInterval);
+      playGroupInterval = null;
+      if (playingGroup === realSlide[0]) {
+        slideIndex = group.files.findIndex((f) => f.name === realSlide[1]) - 1;
+        nextSlide(realSlide[0]);
+        return;
+      }
+    }
+    if (playingGroup && playingGroup !== realSlide[0]) {
+      playingGroup = null;
+      sendMessage({ type: 'playingGroup', group: null });
+    }
     activeSlide = realSlide;
     updateStateInfo();
     sendMessage({ type: 'activeSlide', slide: realSlide });
