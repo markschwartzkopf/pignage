@@ -1,4 +1,3 @@
-add groups
 delete files & groups
 reboot button
 de-uglify UI

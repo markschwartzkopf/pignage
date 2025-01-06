@@ -6,6 +6,7 @@ import path from 'path';
 import { WebSocket } from 'ws';
 import { ClientMessage, ServerMessage } from '../global-types';
 import {
+  addGroup,
   getGroups,
   renameGroup,
   repopulateGroup,
@@ -194,6 +195,10 @@ export function initializeServer() {
               }
               case 'setSlideDelay': {
                 setSlideDelay(msg.group, msg.delay);
+                break;
+              }
+              case 'addGroup': {
+                addGroup(msg.name);
                 break;
               }
               default:

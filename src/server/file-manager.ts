@@ -221,3 +221,24 @@ export function repopulateGroup(groupName: string) {
       log('server', 'error', `Error repopulating group "${groupName}"`, err);
     });
 }
+
+export function addGroup(groupName: string) {
+  const groupPath = path.join(groupDirectory, groupName);
+  fs.mkdir(groupPath)
+    .then(() => {
+      const group: FileGroup = {
+        name: groupName,
+        files: [],
+        thumbnail: '',
+        thumbnailWidth: 0,
+        slideDelay: 5,
+      };
+      groups.push(group);
+      log('server', 'info', `Group "${groupName}" created.`);
+      groups.sort((a, b) => a.name.localeCompare(b.name));
+      refreshGroups();
+    })
+    .catch((err) => {
+      log('server', 'error', `Error creating group "${groupName}"`, err);
+    });
+}

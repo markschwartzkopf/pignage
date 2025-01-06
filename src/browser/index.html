@@ -30,9 +30,9 @@
         flex-wrap: wrap;
       }
       .slide-group {
-        margin: 1vw;
-        padding: 1vw;
-        border: 0.2vw solid white;
+        margin: 1vh;
+        padding: 1vh;
+        border: 0.2vh solid white;
         background-color: black;
         border-radius: 1vw;
         max-width: 98vw;
@@ -52,6 +52,12 @@
         height: 1em;
         cursor: pointer;
       }
+      .svg-icon:hover {
+        transform: scale(1.2);
+      }
+      .svg-icon:active {
+        transform: scale(0.9);
+      }
       .svg-icon.playing {
         fill: #0f0;
         stroke: #0f0;
@@ -60,7 +66,7 @@
         width: 200px;
         height: 100%;
         position: absolute;
-        border: 1vw solid white;
+        border: 0.5vh solid white;
       }
       img {
         display: block;
@@ -80,6 +86,7 @@
         margin-top: 0.25em;
       }
       iframe {
+        margin: 1vh;
         border: 1vh solid white;
         border-radius: 1vh;
         background-color: none;
@@ -93,11 +100,35 @@
         align-items: center;
         width: 100%;
       }
+      button {
+        all: unset;
+        display: inline-block;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 1rem;
+        padding: 0.5em 1em;
+        border: 0.2vh solid white;
+        border-radius: 1vh;
+        background-color: black;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        text-align: center; /* Center text */
+      }
+
+      button:hover {
+        background-color: dimgray; /* Darken background on hover */
+      }
+
+      button:active {
+        transform: scale(0.95); /* Add a subtle press effect */
+      }
     </style>
   </head>
   <body>
     <div class="header">Slide Groups</div>
     <div id="slide-groups"></div>
+    <div class="centering-container">
+      <button id="add-slide-group">Add Slide Group</button>
+    </div>
     <div class="centering-container">
       <iframe src="display.html"></iframe>
     </div>

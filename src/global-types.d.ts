@@ -48,10 +48,15 @@ export type ClientMessageSetSlideDelay = {
   group: string;
   delay: number;
 };
+export type ClientMessageAddGroup = {
+  type: 'addGroup';
+  name: string;
+};
 
 export type ClientMessage =
   | ClientMessageActiveSlide
   | ClientMessageLog
   | ClientMessagePlayGroup
   | ClientMessageRenameGroup
-  | ClientMessageSetSlideDelay;
+  | ClientMessageSetSlideDelay
+  | ClientMessageAddGroup;

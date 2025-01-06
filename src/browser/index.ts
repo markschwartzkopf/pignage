@@ -16,6 +16,18 @@ let activeSlideIndicator: HTMLElement | null = null;
 let activeSlide: [string, string] | null = null;
 let playingGroup: string | null = null;
 
+const addSlideGroupButton = document.getElementById(
+  'add-slide-group'
+) as HTMLButtonElement;
+addSlideGroupButton.onclick = () => {
+  const groupName = prompt('Enter a name for the new slide group');
+  if (groupName && groups.every((g) => g.name !== groupName)) {
+    sendMessage({ type: 'addGroup', name: groupName });
+  } else {
+    alert('Invalid group name or group already exists');
+  }
+};
+
 let socket: WebSocket | null = null;
 function connect() {
   socket = new WebSocket(window.location.href.replace(/^http/, 'ws'));
