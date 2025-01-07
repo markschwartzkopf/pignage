@@ -191,7 +191,8 @@ function populateGroups() {
     playIcon.setAttribute('viewBox', '0 0 40 40');
     playIcon.setAttribute('fill', '#ffffff');
     playIcon.setAttribute('stroke', '#ffffff');
-    playIcon.innerHTML = playIconSvg;
+    playIcon.innerHTML =
+      playingGroup === group.name ? pauseIconSvg : playIconSvg;
     playIcon.onclick = () => {
       if (playingGroup === group.name) {
         sendMessage({ type: 'playGroup', group: null });
