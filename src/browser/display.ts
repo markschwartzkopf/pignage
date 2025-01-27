@@ -24,7 +24,7 @@ let socket: WebSocket | null = null;
 function connect() {
   socket = new WebSocket(window.location.href.replace(/^http/, 'ws'));
   socket.onopen = () => {
-    console.log('WebSocket opened');
+    console.log('Display WebSocket opened');
   };
   socket.onmessage = (event) => {
     if (typeof event.data === 'string') {

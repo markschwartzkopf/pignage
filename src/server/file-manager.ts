@@ -242,3 +242,38 @@ export function addGroup(groupName: string) {
       log('server', 'error', `Error creating group "${groupName}"`, err);
     });
 }
+
+export function removeSlide(groupName: string, slideName: string) {
+  const group = groups.find((g) => g.name === groupName);
+  if (!group) {
+    log('server', 'error', `Group "${groupName}" not found.`);
+    return;
+  }
+  const slideIndex = group.files.findIndex((f) => f.name === slideName);
+  if (slideIndex === -1) {
+    log(
+      'server',
+      'error',
+      `Slide "${slideName}" not found in group "${groupName}".`
+    );
+    return;
+  }
+  const slidePath = path.join(groupDirectory, groupName, slideName);
+  fs.unlink(slidePath)
+    .then(() => {
+      log(
+        'server',
+        'info',
+        `Slide "${slideName}" removed from group "${groupName}".`
+      );
+      repopulateGroup(groupName);
+    })
+    .catch((err) => {
+      log(
+        'server',
+        'error',
+        `Error removing slide "${slideName}" from group "${groupName}".`,
+        err
+      );
+    });
+}

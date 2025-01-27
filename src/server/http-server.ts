@@ -8,6 +8,7 @@ import { ClientMessage, ServerMessage } from '../global-types';
 import {
   addGroup,
   getGroups,
+  removeSlide,
   renameGroup,
   repopulateGroup,
   setSlideDelay,
@@ -199,6 +200,23 @@ export function initializeServer() {
               }
               case 'addGroup': {
                 addGroup(msg.name);
+                break;
+              }
+              case 'removeSlide': {
+                if (playingGroup === msg.group) {
+                  log(
+                    'server',
+                    'error',
+                    'Cannot remove slide from playing group'
+                  );
+                  break;
+                }
+                log(
+                  'server',
+                  'info',
+                  `Removing slide: ${msg.group}/${msg.slide}`
+                );
+                removeSlide(msg.group, msg.slide);
                 break;
               }
               default:

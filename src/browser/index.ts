@@ -9,10 +9,12 @@ const svgNS = 'http://www.w3.org/2000/svg'; // SVG namespace
 const playIconSvg = `<polygon points="5 3 35 20 5 37 5 3"></polygon>`;
 const pauseIconSvg = `<rect x="3" y="3" width="12" height="34"></rect><rect x="25" y="3" width="12" height="34"></rect>`;
 const uploadIconSvg = `<rect x="3" y="25.5" width="20" height="11.25"/><path d="M3 35.5l7 -7l7 7l3 -3l3 3"/><path d="M16 30.5h4a1 1 0 0 0 0 -2h-1.5a 1 1 0 0 0 -2 0h-0.5a1 1 0 0 0 0 2"/><path d="M7 31.5a2.5 2.5 0 1 1 2.5 -2.5z" fill="white" stroke="none"/><path d="M16 19h22v-14a1 1 0 0 0 -1 -1h-14a1.2 1.2 0 0 1 -1 -0.7l-0.5 -1a1.2 1.2 0 0 0 -1 -0.7h-3.5a1 1 0 0 0 -1 1z"/><path d="M13 12h 15v15l-5 -5l-10 10l-5 -5l10 -10z" fill="black"/>`;
+const trashSvg = `<path d="M89 9a4 4 0 0 1 4 4v2h-86v-2a4 4 0 0 1 4 -4z" fill="white"/><path d="M41 9v-5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v5"/><path d="M74.25 94.5a6 6 0 0 0 5.95 -5.15l9.8 -69.85h-80l9.8 69.85a6 6 0 0 0 5.95 5.15z" fill="black"/><path d="M50 30v54" stroke-linecap="round"/><path d="M30 30l4 54" stroke-linecap="round"/><path d="M70 30l-4 54" stroke-linecap="round"/>`;
 
 let groups: (FileGroup & { scrollEl?: HTMLElement; playEl?: SVGElement })[] =
   [];
 let activeSlideIndicator: HTMLElement | null = null;
+let trashDiv: HTMLElement | null = null;
 let activeSlide: [string, string] | null = null;
 let playingGroup: string | null = null;
 
@@ -30,9 +32,10 @@ addSlideGroupButton.onclick = () => {
 
 let socket: WebSocket | null = null;
 function connect() {
+  console.log('Connecting to WebSocket:');
   socket = new WebSocket(window.location.href.replace(/^http/, 'ws'));
   socket.onopen = () => {
-    console.log('WebSocket opened');
+    console.log('Control WebSocket opened');
   };
   socket.onmessage = (event) => {
     if (typeof event.data === 'string') {
@@ -90,6 +93,10 @@ function setActiveSlide() {
     : -1;
   if (group && slideIndex > -1) {
     const scroller = group.scrollEl;
+    if (trashDiv && trashDiv.parentElement === scroller) {
+      trashDiv.remove();
+      trashDiv = null;
+    }
     if (!scroller)
       return log('error', `No scroller found for group: ${group.name}`);
     const center = 100 + slideIndex * 200;
@@ -101,6 +108,9 @@ function setActiveSlide() {
     scroller.scrollTo({ left: scrollTo, behavior: 'smooth' });
     if (activeSlideIndicator) activeSlideIndicator.remove();
     activeSlideIndicator = document.createElement('div');
+    activeSlideIndicator.oncontextmenu = (event) => {
+      event.preventDefault();
+    };
     activeSlideIndicator.classList.add('active-slide-indicator');
     activeSlideIndicator.style.left = `${slideIndex * 200}px`;
     scroller.prepend(activeSlideIndicator);
@@ -216,6 +226,47 @@ function populateGroups() {
           slide: [group.name, group.files[imageIndex].name],
         });
       } else log('error', `No image at index ${imageIndex}`);
+    };
+    thumbnail.oncontextmenu = (event) => {
+      if (
+        activeSlideIndicator &&
+        activeSlideIndicator.parentElement === group.scrollEl
+      )
+        return;
+      event.preventDefault();
+      const rect = thumbnail.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const imageIndex = Math.floor((x / rect.width) * group.files.length);
+      if (group.scrollEl) {
+        if (trashDiv) trashDiv.remove();
+        trashDiv = document.createElement('div');
+        trashDiv.oncontextmenu = (event) => {
+          if (trashDiv) trashDiv.remove();
+          trashDiv = null;
+          event.preventDefault();
+        };
+        trashDiv.classList.add('trash');
+        trashDiv.style.left = `${imageIndex * 200}px`;
+        const trashIcon = document.createElementNS(svgNS, 'svg');
+        trashIcon.classList.add('trash-icon');
+        trashIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        trashIcon.setAttribute('viewBox', '0 0 100 100');
+        trashIcon.setAttribute('stroke', 'currentColor');
+        trashIcon.setAttribute('stroke-width', '3');
+        trashIcon.setAttribute('fill', 'none');
+        trashIcon.innerHTML = trashSvg;
+        trashDiv.appendChild(trashIcon);
+        trashDiv.onclick = () => {
+          if (group.files[imageIndex]) {
+            sendMessage({
+              type: 'removeSlide',
+              group: group.name,
+              slide: group.files[imageIndex].name,
+            });
+          }
+        };
+        group.scrollEl.prepend(trashDiv);
+      }
     };
     thumbnailContainer.appendChild(thumbnail);
     groupElement.appendChild(thumbnailContainer);
