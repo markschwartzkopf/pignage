@@ -11,6 +11,32 @@ if (window.self !== window.top) {
   document.documentElement.classList.add('inside-iframe');
 }
 
+let ipAddressText = 'No IP address yet';
+let cursorTimeout: ReturnType<typeof setTimeout> | null = null;
+function hideCursor() {
+  document.body.style.cursor = 'none';
+  document.body.parentElement!.style.cursor = 'none';
+  const ipAddress = document.getElementById('ip-address');
+  if (ipAddress) ipAddress.style.display = 'none';
+}
+
+setTimeout(() => {
+  hideCursor();
+}, 100);
+
+document.addEventListener('mousemove', () => {
+  if (cursorTimeout) {
+    clearInterval(cursorTimeout);
+  }
+  cursorTimeout = setTimeout(() => {
+    hideCursor();
+  }, 5000);
+  document.body.style.cursor = 'default';
+  document.body.parentElement!.style.cursor = 'default';
+  const ipAddress = document.getElementById('ip-address');
+  if (ipAddress) ipAddress.style.display = 'unset';
+});
+
 type clientFile = FileGroup['files'][number] & { element: HTMLElement };
 type clientFileGroup = {
   name: string;
@@ -41,6 +67,11 @@ function connect() {
             break;
           }
           case 'playingGroup': {
+            break;
+          }
+          case 'ipAddress': {
+            ipAddressText = message.address;
+            document.getElementById('ip-address')!.innerText = ipAddressText;
             break;
           }
           default:
@@ -84,6 +115,10 @@ function setActiveSlide() {
 function populateGroups(serverGroups: FileGroup[]) {
   //should figure out if any clientFile elements need to be removed and do it, and then create new groups, slotting in elements as is appropriate
   document.body.innerHTML = '';
+  const ipAddress = document.createElement('div');
+  ipAddress.id = 'ip-address';
+  ipAddress.innerText = ipAddressText;
+  document.body.appendChild(ipAddress);
   groups = serverGroups.map((group) => {
     const clientGroup: clientFileGroup = {
       name: group.name,

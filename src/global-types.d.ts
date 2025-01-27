@@ -18,15 +18,22 @@ export type ServerMessagePlayingGroup = {
   type: 'playingGroup';
   group: string | null;
 };
+export type ServerIpAddress = {
+  type: 'ipAddress';
+  address: string;
+};
 
 export type ServerMessage =
   | ServerMessageGroups
   | ServerMessageActiveSlide
-  | ServerMessagePlayingGroup;
+  | ServerMessagePlayingGroup
+  | ServerIpAddress;
+
 type file = {
   name: string;
   url: string;
 };
+
 export type ClientMessageActiveSlide = ServerMessageActiveSlide;
 export type ClientMessageLog = {
   type: 'log';

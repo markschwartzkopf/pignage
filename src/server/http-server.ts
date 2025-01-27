@@ -1,6 +1,6 @@
 import http from 'http';
 import fs from 'fs';
-import { exec } from 'child_process';
+//import { exec } from 'child_process';
 import os from 'os';
 import path from 'path';
 import { WebSocket } from 'ws';
@@ -169,6 +169,7 @@ export function initializeServer() {
         sendMessage({ type: 'groups', groups: getGroups() }, ws);
         sendMessage({ type: 'activeSlide', slide: activeSlide }, ws);
         sendMessage({ type: 'playingGroup', group: playingGroup }, ws);
+        sendMessage({ type: 'ipAddress', address: getLocalIP() }, ws);
         ws.on('message', (message) => {
           try {
             const msg = JSON.parse(message.toString()) as ClientMessage;
@@ -373,4 +374,16 @@ export function getActiveSlide() {
 export function refreshGroups() {
   updateGroupInfo();
   sendMessage({ type: 'groups', groups: getGroups() });
+}
+
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]!) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'No IP address found';
 }
