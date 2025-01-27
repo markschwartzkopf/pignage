@@ -17,6 +17,7 @@ export function initializeGroups() {
       return fs.mkdir(groupDirectory);
     })
     .then(() => {
+      log('server', 'info', 'Getting group subdirectories');
       return getDirectories(groupDirectory);
     })
     .then((directories) => {
@@ -113,47 +114,54 @@ function populateGroup(directoryPath: string, group: FileGroup) {
               );
             });
         });
-        Promise.all(fileProcessingPromises)
-          .then(() => {
-            group.files = files.map((file) => {
-              return {
-                name: file,
-                url: `groups/${group.name}/${file}`,
-              };
-            });
-            group.thumbnailWidth = thumbnails.length * 200;
-            const compositeImages = thumbnails.map((thumbnail, index) => ({
-              input: thumbnail,
-              top: 0,
-              left: index * 200, // Adjust the position as needed
-            }));
-            if (!thumbnailHeight) thumbnailHeight = 200;
-            sharp({
-              create: {
-                width: thumbnails.length * 200,
-                height: thumbnailHeight,
-                channels: 4,
-                background: { r: 255, g: 255, b: 255, alpha: 0 },
-              },
-            })
-              .composite(compositeImages)
-              .jpeg({ quality: 80 })
-              .toBuffer()
-              .then((compositeBuffer) => {
-                group.thumbnail =
-                  `data:image/jpeg;base64,` +
-                  compositeBuffer.toString('base64');
-                resolve();
-              })
-              .catch((err) => {
-                log('server', 'error', 'Error creating composite image:', err);
-                reject(err);
+        if (fileProcessingPromises.length > 0) {
+          Promise.all(fileProcessingPromises)
+            .then(() => {
+              group.files = files.map((file) => {
+                return {
+                  name: file,
+                  url: `groups/${group.name}/${file}`,
+                };
               });
-          })
-          .catch((err) => {
-            log('server', 'error', 'Error processing files:', err);
-            reject(err);
-          });
+              group.thumbnailWidth = thumbnails.length * 200;
+              const compositeImages = thumbnails.map((thumbnail, index) => ({
+                input: thumbnail,
+                top: 0,
+                left: index * 200, // Adjust the position as needed
+              }));
+              if (!thumbnailHeight) thumbnailHeight = 200;
+              sharp({
+                create: {
+                  width: thumbnails.length * 200,
+                  height: thumbnailHeight,
+                  channels: 4,
+                  background: { r: 255, g: 255, b: 255, alpha: 0 },
+                },
+              })
+                .composite(compositeImages)
+                .jpeg({ quality: 80 })
+                .toBuffer()
+                .then((compositeBuffer) => {
+                  group.thumbnail =
+                    `data:image/jpeg;base64,` +
+                    compositeBuffer.toString('base64');
+                  resolve();
+                })
+                .catch((err) => {
+                  log(
+                    'server',
+                    'error',
+                    'Error creating composite image:',
+                    err
+                  );
+                  reject(err);
+                });
+            })
+            .catch((err) => {
+              log('server', 'error', 'Error processing files:', err);
+              reject(err);
+            });
+        } else resolve();
       })
       .catch((err) => {
         log('server', 'error', 'Error reading directory', err);
@@ -201,13 +209,7 @@ export function setSlideDelay(
   if (!fromFile) refreshGroups();
 }
 
-export function repopulateGroup(groupName: string) {
-  console.log(
-    `repopulating group "${groupName}", Path: ${path.join(
-      groupDirectory,
-      groupName
-    )}`
-  );
+export function repopulateGroup(groupName: string) {  
   const group = groups.find((g) => g.name === groupName);
   if (!group) {
     log('server', 'error', `Group "${groupName}" not found.`);

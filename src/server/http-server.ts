@@ -20,7 +20,7 @@ const connections: WebSocket[] = [];
 let activeSlide: [string, string] | null = null;
 let playingGroup: string | null = null;
 
-let canReboot = false;
+/* let canReboot = false;
 if (os.platform() === 'linux') {
   exec('command -v reboot', (error, stdout, stderr) => {
     if (!error && !stderr && stdout) {
@@ -34,7 +34,7 @@ if (os.platform() === 'linux') {
     } else log('server', 'info', 'reboot not available');
   });
 } else
-  log('server', 'info', 'Not on linux, not checking for reboot permission');
+  log('server', 'info', 'Not on linux, not checking for reboot permission'); */
 
 let port = 80;
 const args = process.argv.slice(2);
