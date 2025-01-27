@@ -228,11 +228,6 @@ function populateGroups() {
       } else log('error', `No image at index ${imageIndex}`);
     };
     thumbnail.oncontextmenu = (event) => {
-      if (
-        activeSlideIndicator &&
-        activeSlideIndicator.parentElement === group.scrollEl
-      )
-        return;
       event.preventDefault();
       const rect = thumbnail.getBoundingClientRect();
       const x = event.clientX - rect.left;

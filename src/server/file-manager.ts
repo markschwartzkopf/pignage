@@ -3,7 +3,7 @@ import * as path from 'path';
 import { FileGroup } from '../global-types';
 import sharp from 'sharp';
 import { log } from './logger';
-import { refreshGroups } from './http-server';
+import { refreshGroups, getActiveSlide } from './http-server';
 
 const groupDirectory = path.join(__dirname, '../browser/groups');
 
@@ -209,7 +209,7 @@ export function setSlideDelay(
   if (!fromFile) refreshGroups();
 }
 
-export function repopulateGroup(groupName: string) {  
+export function repopulateGroup(groupName: string) {
   const group = groups.find((g) => g.name === groupName);
   if (!group) {
     log('server', 'error', `Group "${groupName}" not found.`);
@@ -246,6 +246,15 @@ export function addGroup(groupName: string) {
 }
 
 export function removeSlide(groupName: string, slideName: string) {
+  const activeSlide = getActiveSlide();
+  if (
+    activeSlide &&
+    activeSlide[0] === groupName &&
+    activeSlide[1] === slideName
+  ) {
+    log('server', 'warn', 'Cannot delete active slide');
+    return;
+  }
   const group = groups.find((g) => g.name === groupName);
   if (!group) {
     log('server', 'error', `Group "${groupName}" not found.`);

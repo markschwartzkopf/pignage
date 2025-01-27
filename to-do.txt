@@ -1,5 +1,5 @@
-
-delete files & groups
+delete groups
+"go black" button
 reboot button
 de-uglify UI
 Google drive integration
