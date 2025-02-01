@@ -4,6 +4,7 @@ import {
   LogData,
   LogType,
   ServerMessage,
+  ServerMessageActiveSlide,
 } from '../global-types';
 const svgNS = 'http://www.w3.org/2000/svg'; // SVG namespace
 const playIconSvg = `<polygon points="5 3 35 20 5 37 5 3"></polygon>`;
@@ -15,12 +16,13 @@ let groups: (FileGroup & { scrollEl?: HTMLElement; playEl?: SVGElement })[] =
   [];
 let activeSlideIndicator: HTMLElement | null = null;
 let trashDiv: HTMLElement | null = null;
-let activeSlide: [string, string] | null = null;
+let activeSlide: ServerMessageActiveSlide['slide'] = 'black';
 let playingGroup: string | null = null;
 
 const addSlideGroupButton = document.getElementById(
   'add-slide-group'
 ) as HTMLButtonElement;
+const goBlackButton = document.getElementById('go-black') as HTMLButtonElement;
 addSlideGroupButton.onclick = () => {
   const groupName = prompt('Enter a name for the new slide group');
   if (groupName && groups.every((g) => g.name !== groupName)) {
@@ -28,6 +30,10 @@ addSlideGroupButton.onclick = () => {
   } else {
     alert('Invalid group name or group already exists');
   }
+};
+goBlackButton.onclick = () => {
+  sendMessage({ type: 'activeSlide', slide: 'black' });
+  console.log('go black');
 };
 
 let socket: WebSocket | null = null;
@@ -84,7 +90,7 @@ setInterval(() => {
 }, 1000);
 
 function setActiveSlide() {
-  if (!activeSlide) {
+  if (typeof activeSlide === 'string') {
     if (activeSlideIndicator) activeSlideIndicator.remove();
     activeSlideIndicator = null;
     return;

@@ -7,6 +7,7 @@ import {
   playGroup,
   setActiveSlide,
 } from './http-server';
+import { ServerMessageActiveSlide } from '../global-types';
 
 const initGroupInfo: {
   [k: string]: {
@@ -14,10 +15,10 @@ const initGroupInfo: {
   };
 } = {};
 const initStateInfo: {
-  activeSlide: [string, string] | null;
+  activeSlide: ServerMessageActiveSlide['slide'];
   playingGroup: string | null;
 } = {
-  activeSlide: null,
+  activeSlide: 'black',
   playingGroup: null,
 };
 

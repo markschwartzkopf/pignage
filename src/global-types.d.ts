@@ -12,7 +12,7 @@ export type FileGroup = {
 export type ServerMessageGroups = { type: 'groups'; groups: FileGroup[] };
 export type ServerMessageActiveSlide = {
   type: 'activeSlide';
-  slide: [string, string] | null;
+  slide: [string, string] | string;
 };
 export type ServerMessagePlayingGroup = {
   type: 'playingGroup';
@@ -68,6 +68,7 @@ export type ClientMessageRemoveGroup = {
   type: 'removeGroup';
   group: string;
 };
+export type ClientMessageShowColor = { type: 'showColor'; color: string };
 
 export type ClientMessage =
   | ClientMessageActiveSlide
@@ -77,4 +78,5 @@ export type ClientMessage =
   | ClientMessageSetSlideDelay
   | ClientMessageAddGroup
   | ClientMessageRemoveSlide
-  | ClientMessageRemoveGroup;
+  | ClientMessageRemoveGroup
+  | ClientMessageShowColor;

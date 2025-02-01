@@ -4,6 +4,7 @@ import {
   LogData,
   LogType,
   ServerMessage,
+  ServerMessageActiveSlide,
 } from '../global-types';
 
 if (window.self !== window.top) {
@@ -43,7 +44,7 @@ type clientFileGroup = {
   files: clientFile[];
 };
 let groups: clientFileGroup[] = [];
-let activeSlide: [string, string] | null = null;
+let activeSlide: ServerMessageActiveSlide['slide'] = 'black';
 let activeSlideElement: HTMLElement | null = null;
 
 let socket: WebSocket | null = null;
@@ -93,11 +94,13 @@ setInterval(() => {
 }, 1000);
 
 function setActiveSlide() {
-  if (!activeSlide) {
+  if (typeof activeSlide === 'string') {
     if (activeSlideElement) activeSlideElement.style.display = 'none';
     activeSlideElement = null;
+    document.body.style.backgroundColor = activeSlide;
     return;
   }
+  document.body.style.backgroundColor = '';
   const realSlide = activeSlide;
   const group = groups.find((g) => g.name === realSlide[0]);
   const clientFile = group

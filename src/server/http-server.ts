@@ -4,7 +4,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { WebSocket } from 'ws';
-import { ClientMessage, ServerMessage } from '../global-types';
+import {
+  ClientMessage,
+  ServerMessage,
+  ServerMessageActiveSlide,
+} from '../global-types';
 import {
   addGroup,
   getGroups,
@@ -18,7 +22,7 @@ import { log } from './logger';
 import { updateGroupInfo, updateStateInfo } from './data';
 
 const connections: WebSocket[] = [];
-let activeSlide: [string, string] | null = null;
+let activeSlide: ServerMessageActiveSlide['slide'] = 'black';
 let playingGroup: string | null = null;
 
 /* let canReboot = false;
@@ -122,6 +126,65 @@ export function initializeServer() {
           let filePath = '.' + req.url;
           if (filePath == './') {
             filePath = './index.html';
+          }
+          const apiStrings = filePath.split('/');
+          if (apiStrings[1] === 'api') {
+            apiStrings.shift(); //remove "."
+            apiStrings.shift(); //remove "api"
+            switch (apiStrings[0]) {
+              case 'set-slide': {
+                if (apiStrings.length < 3) {
+                  const color = apiStrings[1];
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  res.end('Setting active slide to ' + color);
+                  setActiveSlide(color);
+                } else if (apiStrings.length < 4) {
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  res.end(
+                    'Setting active slide to ' +
+                      apiStrings[1] +
+                      '/' +
+                      apiStrings[2]
+                  );
+                  setActiveSlide([apiStrings[1], apiStrings[2]]);
+                } else {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end('Invalid slide request');
+                }
+                break;
+              }
+              case 'get-slide': {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                if (typeof activeSlide === 'string') {
+                  res.end(JSON.stringify({ slide: activeSlide }));
+                } else
+                  res.end(JSON.stringify({ slide: activeSlide.join('/') }));
+                break;
+              }
+              case 'play-group': {
+                const groupName = apiStrings[1];
+                if (groupName) {
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  res.end('Playing group ' + groupName);
+                  playGroup(groupName);
+                } else {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end('Invalid group request');
+                }
+                break;
+              }
+              case 'pause': {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end('Pausing playback');
+                playGroup(null);
+                break;
+              }
+              default: {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('Bad API command: ' + apiStrings[0]);
+              }
+            }
+            break;
           }
           const fileExtention = String(path.extname(filePath)).toLowerCase();
           let contentType = 'text/html';
@@ -342,11 +405,11 @@ function nextSlide(groupName: string) {
   }, curGroup.slideDelay * 1000);
 }
 
-export function setActiveSlide(slide: [string, string] | null) {
-  if (!slide) {
-    activeSlide = null;
+export function setActiveSlide(slide: ServerMessageActiveSlide['slide']) {
+  if (typeof slide === 'string') {
+    activeSlide = slide;
     updateStateInfo();
-    sendMessage({ type: 'activeSlide', slide: null });
+    sendMessage({ type: 'activeSlide', slide: slide });
     return;
   }
   const realSlide = slide;
@@ -382,7 +445,9 @@ export function getPlayingGroup() {
 }
 
 export function getActiveSlide() {
-  return JSON.parse(JSON.stringify(activeSlide)) as [string, string] | null;
+  return JSON.parse(
+    JSON.stringify(activeSlide)
+  ) as ServerMessageActiveSlide['slide'];
 }
 
 export function refreshGroups() {
