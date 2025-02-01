@@ -21,6 +21,7 @@ export function initializeGroups() {
       return getDirectories(groupDirectory);
     })
     .then((directories) => {
+      groups.length = 0;
       const getFilePromises = directories.map((directory) => {
         const group: FileGroup = {
           name: directory,
@@ -284,6 +285,39 @@ export function removeSlide(groupName: string, slideName: string) {
         'server',
         'error',
         `Error removing slide "${slideName}" from group "${groupName}".`,
+        err
+      );
+    });
+}
+
+export function removeGroup(groupName: string) {
+  const activeSlide = getActiveSlide();
+  if (activeSlide && activeSlide[0] === groupName) {
+    log('server', 'warn', 'Cannot delete active group');
+    return;
+  }
+  const group = groups.find((g) => g.name === groupName);
+  if (!group) {
+    log('server', 'error', `Group "${groupName}" not found.`);
+    return;
+  }
+  const groupPath = path.join(groupDirectory, groupName);
+  fs.rm(groupPath, { recursive: true })
+    .then(() => {
+      log('server', 'info', `Group "${groupName} removed".`);
+      initializeGroups()
+        .then(() => {
+          refreshGroups();
+        })
+        .catch((err) => {
+          log('server', 'error', 'Error reinitializing groups', err);
+        });
+    })
+    .catch((err) => {
+      log(
+        'server',
+        'error',
+        `Error removing group "${groupName}".`,
         err
       );
     });

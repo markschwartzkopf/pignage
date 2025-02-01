@@ -64,6 +64,10 @@ export type ClientMessageRemoveSlide = {
   group: string;
   slide: string;
 };
+export type ClientMessageRemoveGroup = {
+  type: 'removeGroup';
+  group: string;
+};
 
 export type ClientMessage =
   | ClientMessageActiveSlide
@@ -72,4 +76,5 @@ export type ClientMessage =
   | ClientMessageRenameGroup
   | ClientMessageSetSlideDelay
   | ClientMessageAddGroup
-  | ClientMessageRemoveSlide;
+  | ClientMessageRemoveSlide
+  | ClientMessageRemoveGroup;

@@ -63,6 +63,9 @@ function connect() {
             });
             break;
           }
+          case 'ipAddress': {
+            break;
+          }
           default:
             log('error', 'Unknown message type:', message);
         }
@@ -195,6 +198,22 @@ function populateGroups() {
       input.click();
     };
     header.appendChild(uploadIcon);
+
+    const trashIcon = document.createElementNS(svgNS, 'svg');
+    trashIcon.classList.add('svg-icon');
+    trashIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    trashIcon.setAttribute('viewBox', '0 0 100 100');
+    trashIcon.setAttribute('fill', 'none');
+    trashIcon.setAttribute('stroke', '#ffffff');
+    trashIcon.setAttribute('stroke-width', '2');
+    trashIcon.innerHTML = trashSvg;
+    trashIcon.onclick = () => {
+      if (confirm(`Delete slide group "${group.name}"?`)) {
+        sendMessage({ type: 'removeGroup', group: group.name });
+      }
+    };
+    header.appendChild(trashIcon);
+
     const playIcon = document.createElementNS(svgNS, 'svg');
     playIcon.classList.add('svg-icon');
     playIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
