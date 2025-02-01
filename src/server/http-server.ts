@@ -20,12 +20,13 @@ import {
 } from './file-manager';
 import { log } from './logger';
 import { updateGroupInfo, updateStateInfo } from './data';
+import { exec } from 'child_process';
 
 const connections: WebSocket[] = [];
 let activeSlide: ServerMessageActiveSlide['slide'] = 'black';
 let playingGroup: string | null = null;
 
-/* let canReboot = false;
+let canReboot = false;
 if (os.platform() === 'linux') {
   exec('command -v reboot', (error, stdout, stderr) => {
     if (!error && !stderr && stdout) {
@@ -39,7 +40,7 @@ if (os.platform() === 'linux') {
     } else log('server', 'info', 'reboot not available');
   });
 } else
-  log('server', 'info', 'Not on linux, not checking for reboot permission'); */
+  log('server', 'info', 'Not on linux, not checking for reboot permission');
 
 let port = 80;
 const args = process.argv.slice(2);
@@ -217,9 +218,7 @@ export function initializeServer() {
     })
     .listen(port, () => {
       log('server', 'info', `Http server started on port ${port}`);
-
       const wss = new WebSocket.Server({ server: httpServer });
-
       wss.on('connection', (ws, req) => {
         connections.push(ws);
         const ip = req.socket.remoteAddress
@@ -234,6 +233,7 @@ export function initializeServer() {
         sendMessage({ type: 'activeSlide', slide: activeSlide }, ws);
         sendMessage({ type: 'playingGroup', group: playingGroup }, ws);
         sendMessage({ type: 'ipAddress', address: getLocalIP() }, ws);
+        sendMessage({ type: 'canReboot', canReboot: canReboot }, ws);
         ws.on('message', (message) => {
           try {
             const msg = JSON.parse(message.toString()) as ClientMessage;
@@ -297,6 +297,12 @@ export function initializeServer() {
                 removeGroup(msg.group);
                 break;
               }
+              case 'reboot':
+                if (canReboot) {
+                  log('server', 'info', 'Rebooting...');
+                  exec('sudo reboot');
+                }
+                break;
               default:
                 log(
                   'server',

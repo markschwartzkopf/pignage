@@ -23,6 +23,7 @@ const addSlideGroupButton = document.getElementById(
   'add-slide-group'
 ) as HTMLButtonElement;
 const goBlackButton = document.getElementById('go-black') as HTMLButtonElement;
+const rebootButton = document.getElementById('reboot') as HTMLButtonElement;
 addSlideGroupButton.onclick = () => {
   const groupName = prompt('Enter a name for the new slide group');
   if (groupName && groups.every((g) => g.name !== groupName)) {
@@ -34,6 +35,9 @@ addSlideGroupButton.onclick = () => {
 goBlackButton.onclick = () => {
   sendMessage({ type: 'activeSlide', slide: 'black' });
   console.log('go black');
+};
+rebootButton.onclick = () => {
+  if (confirm('Reboot the Pi?')) sendMessage({ type: 'reboot' });
 };
 
 let socket: WebSocket | null = null;
@@ -70,6 +74,14 @@ function connect() {
             break;
           }
           case 'ipAddress': {
+            break;
+          }
+          case 'canReboot': {
+            if (message.canReboot) {
+              rebootButton.style.display = 'block';
+            } else {
+              rebootButton.style.display = 'none';
+            }
             break;
           }
           default:

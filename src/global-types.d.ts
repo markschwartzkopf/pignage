@@ -22,12 +22,17 @@ export type ServerIpAddress = {
   type: 'ipAddress';
   address: string;
 };
+export type ServerMessageCanReboot = {
+  type: 'canReboot';
+  canReboot: boolean;
+}
 
 export type ServerMessage =
   | ServerMessageGroups
   | ServerMessageActiveSlide
   | ServerMessagePlayingGroup
-  | ServerIpAddress;
+  | ServerIpAddress
+  | ServerMessageCanReboot;
 
 type file = {
   name: string;
@@ -69,6 +74,7 @@ export type ClientMessageRemoveGroup = {
   group: string;
 };
 export type ClientMessageShowColor = { type: 'showColor'; color: string };
+export type ClientMessageReboot = { type: 'reboot' };
 
 export type ClientMessage =
   | ClientMessageActiveSlide
@@ -79,4 +85,5 @@ export type ClientMessage =
   | ClientMessageAddGroup
   | ClientMessageRemoveSlide
   | ClientMessageRemoveGroup
-  | ClientMessageShowColor;
+  | ClientMessageShowColor
+  | ClientMessageReboot;

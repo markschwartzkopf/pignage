@@ -1,2 +1,1 @@
-reboot button
 Google drive integration

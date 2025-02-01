@@ -75,6 +75,9 @@ function connect() {
             document.getElementById('ip-address')!.innerText = ipAddressText;
             break;
           }
+          case 'canReboot': {
+            break;
+          }
           default:
             // @ts-ignore
             log('error', `Unknown message type: ${message.type}`);
