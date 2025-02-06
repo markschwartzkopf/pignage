@@ -414,8 +414,14 @@ function nextSlide(groupName: string) {
 export function setActiveSlide(slide: ServerMessageActiveSlide['slide']) {
   if (typeof slide === 'string') {
     activeSlide = slide;
+    playingGroup = null;
+    if (playGroupInterval) {
+      clearInterval(playGroupInterval);
+      playGroupInterval = null;
+    }
     updateStateInfo();
     sendMessage({ type: 'activeSlide', slide: slide });
+    sendMessage({ type: 'playingGroup', group: null });
     return;
   }
   const realSlide = slide;
