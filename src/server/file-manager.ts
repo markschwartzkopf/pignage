@@ -75,6 +75,7 @@ function getFiles(path: string) {
           .filter((dirent) => dirent.isFile())
           .map((dirent) => dirent.name);
         files.sort(); // Sort the files alphabetically
+        console.log(files);
         resolve(files);
       })
       .catch((err) => {
@@ -86,8 +87,9 @@ function getFiles(path: string) {
 function populateGroup(directoryPath: string, group: FileGroup) {
   return new Promise<void>((resolve, reject) => {
     const filePaths: string[] = [];
-    const files: string[] = [];
-    const thumbnails: Buffer[] = [];
+    const filesAndThumbnails: [string, Buffer][] = [];
+    //const files: string[] = [];
+    //const thumbnails: Buffer[] = [];
     let thumbnailHeight = 0;
     getFiles(directoryPath)
       .then((filenames) => {
@@ -97,8 +99,7 @@ function populateGroup(directoryPath: string, group: FileGroup) {
             .resize(200)
             .toBuffer()
             .then((data) => {
-              thumbnails.push(data);
-              files.push(file);
+              filesAndThumbnails.push([file, data]);
               filePaths.push(filePath);
               return sharp(data).metadata();
             })
@@ -118,22 +119,25 @@ function populateGroup(directoryPath: string, group: FileGroup) {
         if (fileProcessingPromises.length > 0) {
           Promise.all(fileProcessingPromises)
             .then(() => {
-              group.files = files.map((file) => {
+              filesAndThumbnails.sort(); // Sort the files alphabetically
+              console.log('sorted files');
+              console.log(filesAndThumbnails.map((f) => f[0]));
+              group.files = filesAndThumbnails.map((file) => {
                 return {
-                  name: file,
-                  url: `groups/${group.name}/${file}`,
+                  name: file[0],
+                  url: `groups/${group.name}/${file[0]}`,
                 };
               });
-              group.thumbnailWidth = thumbnails.length * 200;
-              const compositeImages = thumbnails.map((thumbnail, index) => ({
-                input: thumbnail,
+              group.thumbnailWidth = filesAndThumbnails.length * 200;
+              const compositeImages = filesAndThumbnails.map((thumbnail, index) => ({
+                input: thumbnail[1],
                 top: 0,
                 left: index * 200, // Adjust the position as needed
               }));
               if (!thumbnailHeight) thumbnailHeight = 200;
               sharp({
                 create: {
-                  width: thumbnails.length * 200,
+                  width: filesAndThumbnails.length * 200,
                   height: thumbnailHeight,
                   channels: 4,
                   background: { r: 255, g: 255, b: 255, alpha: 0 },
