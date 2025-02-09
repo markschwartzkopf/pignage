@@ -4,6 +4,7 @@
   "description": "Software for using a Raspberry Pi for signage",
   "scripts": {
     "start": "node index.js 9099",
+    "start-slow-network": "node index.js 9099 slow",
     "watch": "npm-run-all -p watch:*",
     "watch:server": "node ./node_modules/typescript/bin/tsc -p ./src/server --diagnostics --watch",
     "watch:browser": "node ./node_modules/typescript/bin/tsc -p ./src/browser --diagnostics --watch",

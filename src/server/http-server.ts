@@ -51,6 +51,19 @@ if (args && args.length > 0) {
   }
 }
 
+let slowMode = false;
+if (args && args.length > 1) {
+  const argument = args[1];
+  switch (argument) {
+    case 'slow':
+      slowMode = true;
+      log('server', 'info', 'Slow mode enabled');
+      break;
+    default:
+      log('server', 'error', 'Invalid argument: ' + argument);
+  }
+}
+
 const mimeTypes = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -196,7 +209,20 @@ export function initializeServer() {
             .readFile(localPath)
             .then((buf) => {
               res.writeHead(200, { 'Content-Type': contentType });
-              res.end(buf, 'utf-8');
+              if (slowMode) {
+                const chunkSize = 1024; // 1KB per chunk
+                let offset = 0;
+                const interval = setInterval(() => {
+                  if (offset < buf.length) {
+                    const end = Math.min(offset + chunkSize, buf.length);
+                    res.write(buf.slice(offset, end));
+                    offset = end;
+                  } else {
+                    clearInterval(interval);
+                    res.end(); // Finish response when all chunks are sent
+                  }
+                }, 100);
+              } else res.end(buf, 'utf-8');
             })
             .catch((err) => {
               if (err.code && err.code === 'ENOENT') {

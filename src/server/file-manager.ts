@@ -75,7 +75,6 @@ function getFiles(path: string) {
           .filter((dirent) => dirent.isFile())
           .map((dirent) => dirent.name);
         files.sort(); // Sort the files alphabetically
-        console.log(files);
         resolve(files);
       })
       .catch((err) => {
@@ -120,8 +119,6 @@ function populateGroup(directoryPath: string, group: FileGroup) {
           Promise.all(fileProcessingPromises)
             .then(() => {
               filesAndThumbnails.sort(); // Sort the files alphabetically
-              console.log('sorted files');
-              console.log(filesAndThumbnails.map((f) => f[0]));
               group.files = filesAndThumbnails.map((file) => {
                 return {
                   name: file[0],
