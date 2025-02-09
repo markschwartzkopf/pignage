@@ -1,2 +1,1 @@
-switch from "display: none" to "visibility: hidden"
 Google drive integration

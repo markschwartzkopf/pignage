@@ -221,7 +221,7 @@ export function initializeServer() {
                     clearInterval(interval);
                     res.end(); // Finish response when all chunks are sent
                   }
-                }, 100);
+                }, 5);
               } else res.end(buf, 'utf-8');
             })
             .catch((err) => {

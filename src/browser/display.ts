@@ -1,6 +1,5 @@
 import {
   ClientMessage,
-  FileGroup,
   LogData,
   LogType,
   ServerMessage,
@@ -12,7 +11,6 @@ if (window.self !== window.top) {
   document.documentElement.classList.add('inside-iframe');
 }
 
-let ipAddressText = 'No IP address yet';
 let cursorTimeout: ReturnType<typeof setTimeout> | null = null;
 function hideCursor() {
   document.body.style.cursor = 'none';
@@ -38,14 +36,8 @@ document.addEventListener('mousemove', () => {
   if (ipAddress) ipAddress.style.display = 'unset';
 });
 
-type clientFile = FileGroup['files'][number] & { element: HTMLElement };
-type clientFileGroup = {
-  name: string;
-  files: clientFile[];
-};
-let groups: clientFileGroup[] = [];
 let activeSlide: ServerMessageActiveSlide['slide'] = 'black';
-let activeSlideElement: HTMLElement | null = null;
+const slideElement = document.getElementById('slide') as HTMLDivElement;
 
 let socket: WebSocket | null = null;
 function connect() {
@@ -59,7 +51,6 @@ function connect() {
         const message: ServerMessage = JSON.parse(event.data);
         switch (message.type) {
           case 'groups':
-            populateGroups(message.groups);
             setActiveSlide();
             break;
           case 'activeSlide': {
@@ -71,8 +62,7 @@ function connect() {
             break;
           }
           case 'ipAddress': {
-            ipAddressText = message.address;
-            document.getElementById('ip-address')!.innerText = ipAddressText;
+            document.getElementById('ip-address')!.innerText = message.address;
             break;
           }
           case 'canReboot': {
@@ -98,52 +88,22 @@ setInterval(() => {
 
 function setActiveSlide() {
   if (typeof activeSlide === 'string') {
-    if (activeSlideElement) activeSlideElement.style.display = 'none';
-    activeSlideElement = null;
     document.body.style.backgroundColor = activeSlide;
+    slideElement.style.backgroundImage = '';
     return;
   }
-  document.body.style.backgroundColor = '';
-  const realSlide = activeSlide;
-  const group = groups.find((g) => g.name === realSlide[0]);
-  const clientFile = group
-    ? group.files.find((f) => f.name === realSlide[1])
-    : null;
-  if (clientFile) {
-    const oldActiveSlideElement = activeSlideElement;
-    activeSlideElement = clientFile.element;
-    activeSlideElement.style.display = '';
-    if (oldActiveSlideElement && oldActiveSlideElement !== activeSlideElement)
-      oldActiveSlideElement.style.display = 'none';
-  }
-}
-
-function populateGroups(serverGroups: FileGroup[]) {
-  //should figure out if any clientFile elements need to be removed and do it, and then create new groups, slotting in elements as is appropriate
-  document.body.innerHTML = '';
-  const ipAddress = document.createElement('div');
-  ipAddress.id = 'ip-address';
-  ipAddress.innerText = ipAddressText;
-  document.body.appendChild(ipAddress);
-  groups = serverGroups.map((group) => {
-    const clientGroup: clientFileGroup = {
-      name: group.name,
-      files: group.files.map((file) => {
-        const image = document.createElement('div');
-        image.style.backgroundImage = `url(${file.url})`;
-        image.style.backgroundSize = 'contain';
-        image.style.backgroundRepeat = 'no-repeat';
-        image.style.backgroundPosition = 'center';
-        image.style.width = '100%';
-        image.style.height = '100%';
-        image.style.display = 'none';
-
-        document.body.appendChild(image);
-        return { ...file, element: image };
-      }),
-    };
-    return clientGroup;
-  });
+  const url = ['groups', ...activeSlide].join('/');
+  const img = new Image();
+  console.log('Loading image:', url);
+  img.src = url;
+  img.onload = () => {
+    console.log('Image loaded:', url);
+    slideElement.style.backgroundImage = `url(${url})`;
+    document.body.style.backgroundColor = '';
+  };
+  img.onerror = () => {
+    log('error', `Error loading image: ${url}`);
+  };  
 }
 
 function sendMessage(message: ClientMessage) {
