@@ -18,7 +18,7 @@ import {
   repopulateGroup,
   setSlideDelay,
 } from './file-manager';
-import { log } from './logger';
+import { log, logBrowser } from './logger';
 import { updateGroupInfo, updateStateInfo } from './data';
 import { exec } from 'child_process';
 
@@ -30,17 +30,16 @@ let canReboot = false;
 if (os.platform() === 'linux') {
   exec('command -v reboot', (error, stdout, stderr) => {
     if (!error && !stderr && stdout) {
-      log('server', 'info', 'reboot available, checking permission');
+      log('info', 'reboot available, checking permission');
       exec('sudo -n reboot --help', (error, stdout, stderr) => {
         if (!error && !stderr && stdout) {
-          log('server', 'info', 'program has reboot permission');
+          log('info', 'program has reboot permission');
           canReboot = true;
-        } else log('server', 'info', 'program does not have reboot permission');
+        } else log('info', 'program does not have reboot permission');
       });
-    } else log('server', 'info', 'reboot not available');
+    } else log('info', 'reboot not available');
   });
-} else
-  log('server', 'info', 'Not on linux, not checking for reboot permission');
+} else log('info', 'Not on linux, not checking for reboot permission');
 
 let port = 80;
 const args = process.argv.slice(2);
@@ -57,10 +56,10 @@ if (args && args.length > 1) {
   switch (argument) {
     case 'slow':
       slowMode = true;
-      log('server', 'info', 'Slow mode enabled');
+      log('info', 'Slow mode enabled');
       break;
     default:
-      log('server', 'error', 'Invalid argument: ' + argument);
+      log('error', 'Invalid argument: ' + argument);
   }
 }
 
@@ -87,7 +86,7 @@ const mimeTypes = {
 const STATIC_PATH = path.join(__dirname, '../../dist/browser/');
 
 export function initializeServer() {
-  log('server', 'info', 'Starting server on port ' + port);
+  log('info', 'Starting server on port ' + port);
   const httpServer = http
     .createServer((req, res) => {
       switch (req.method) {
@@ -113,23 +112,19 @@ export function initializeServer() {
               .writeFile(localPath, fileBuffer)
               .then(() => {
                 repopulateGroup(filePath.split('/')[1]);
-                log('server', 'info', 'File upload complete');
+                log('info', 'File upload complete');
                 res.writeHead(200, { 'Content-Type': 'text/plain' });
                 res.end('File uploaded successfully');
               })
               .catch((err) => {
-                log('server', 'error', `Error writing file: ${err}`);
+                log('error', `Error writing file: ${err}`);
                 res.writeHead(500, { 'Content-Type': 'text/plain' });
                 res.end('Error writing file');
               });
           });
 
           req.on('error', (err) => {
-            log(
-              'server',
-              'error',
-              `Error receiving file: ${JSON.stringify(err)}`
-            );
+            log('error', `Error receiving file: ${JSON.stringify(err)}`);
             res.writeHead(500, { 'Content-Type': 'text/plain' });
             res.end('Error uploading file');
           });
@@ -226,11 +221,7 @@ export function initializeServer() {
             })
             .catch((err) => {
               if (err.code && err.code === 'ENOENT') {
-                log(
-                  'server',
-                  'error',
-                  `Missing file requested at ${localPath}`
-                );
+                log('error', `Missing file requested at ${localPath}`);
                 res.writeHead(404, { 'Content-Type': 'text/html' });
                 res.end('File not found', 'utf-8');
               } else {
@@ -243,7 +234,7 @@ export function initializeServer() {
       }
     })
     .listen(port, () => {
-      log('server', 'info', `Http server started on port ${port}`);
+      log('info', `Http server started on port ${port}`);
       const wss = new WebSocket.Server({ server: httpServer });
       wss.on('connection', (ws, req) => {
         connections.push(ws);
@@ -251,7 +242,6 @@ export function initializeServer() {
           ? req.socket.remoteAddress
           : 'unknown';
         log(
-          'server',
           'info',
           `Websocket connection established. Active connections: ${connections.length}`
         );
@@ -269,7 +259,7 @@ export function initializeServer() {
                 break;
               }
               case 'log':
-                log(
+                logBrowser(
                   `Client #${connections.indexOf(ws)}, address: "${ip}"`,
                   msg.logType,
                   msg.description,
@@ -295,54 +285,37 @@ export function initializeServer() {
               }
               case 'removeSlide': {
                 if (playingGroup === msg.group) {
-                  log(
-                    'server',
-                    'error',
-                    'Cannot remove slide from playing group'
-                  );
+                  log('error', 'Cannot remove slide from playing group');
                   break;
                 }
-                log(
-                  'server',
-                  'info',
-                  `Removing slide: ${msg.group}/${msg.slide}`
-                );
+                log('info', `Removing slide: ${msg.group}/${msg.slide}`);
                 removeSlide(msg.group, msg.slide);
                 break;
               }
               case 'removeGroup': {
                 if (playingGroup === msg.group) {
-                  log(
-                    'server',
-                    'error',
-                    'Cannot remove currently playing group'
-                  );
+                  log('error', 'Cannot remove currently playing group');
                   break;
                 }
-                log('server', 'info', `Removing group: ${msg.group}`);
+                log('info', `Removing group: ${msg.group}`);
                 removeGroup(msg.group);
                 break;
               }
               case 'reboot':
                 if (canReboot) {
-                  log('server', 'info', 'Rebooting...');
+                  log('info', 'Rebooting...');
                   exec('sudo reboot');
                 }
                 break;
               default:
-                log(
-                  'server',
-                  'error',
-                  `Unknown message type: ${JSON.stringify(msg)})`
-                );
+                log('error', `Unknown message type: ${JSON.stringify(msg)})`);
             }
           } catch (err) {
-            log('server', 'error', `Error parsing message from client: ${err}`);
+            log('error', `Error parsing message from client: ${err}`);
           }
         });
         ws.on('close', () => {
           log(
-            'server',
             'info',
             `Websocket connection closed. Active connections: ${connections.length}`
           );
@@ -385,7 +358,6 @@ export function playGroup(groupName: string | null) {
     updateStateInfo();
     sendMessage({ type: 'playingGroup', group: null });
     log(
-      'server',
       'error',
       `Group not found: "${groupName}". Setting playingGroup to null.`
     );
@@ -423,7 +395,7 @@ export function playGroup(groupName: string | null) {
 function nextSlide(groupName: string) {
   const curGroup = getGroups().find((g) => g.name === groupName);
   if (!curGroup || curGroup.files.length === 0) {
-    log('server', 'error', `Group not found: "${groupName}"`);
+    log('error', `Group not found: "${groupName}"`);
     return;
   }
   slideIndex = (slideIndex + 1) % curGroup.files.length;
@@ -471,11 +443,7 @@ export function setActiveSlide(slide: ServerMessageActiveSlide['slide']) {
     updateStateInfo();
     sendMessage({ type: 'activeSlide', slide: realSlide });
   } else
-    log(
-      'server',
-      'error',
-      `Requested slide not found: ${realSlide[0]}/${realSlide[1]}`
-    );
+    log('error', `Requested slide not found: ${realSlide[0]}/${realSlide[1]}`);
 }
 
 export function getPlayingGroup() {

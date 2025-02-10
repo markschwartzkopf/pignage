@@ -13,11 +13,11 @@ export function initializeGroups() {
   return fs
     .access(groupDirectory)
     .catch(() => {
-      log('server', 'warn', 'Group directory does not exist. Creating it now.');
+      log('warn', 'Group directory does not exist. Creating it now.');
       return fs.mkdir(groupDirectory);
     })
     .then(() => {
-      log('server', 'info', 'Getting group subdirectories');
+      log('info', 'Getting group subdirectories');
       return getDirectories(groupDirectory);
     })
     .then((directories) => {
@@ -34,16 +34,16 @@ export function initializeGroups() {
         const groupPath = path.join(groupDirectory, directory);
         return populateGroup(groupPath, group)
           .then(() => {
-            log('server', 'info', `Group "${directory}" populated.`);
+            log('info', `Group "${directory}" populated.`);
           })
           .catch((err) => {
-            log('server', 'error', `Error populating group: ${directory}`, err);
+            log('error', `Error populating group: ${directory}`, err);
           });
       });
       return Promise.all(getFilePromises);
     })
     .catch((err) => {
-      log('server', 'error', 'Error reading group directory:', err);
+      log('error', 'Error reading group directory:', err);
     });
 }
 
@@ -107,12 +107,7 @@ function populateGroup(directoryPath: string, group: FileGroup) {
                 thumbnailHeight = metadata.height;
             })
             .catch((err) => {
-              log(
-                'server',
-                'error',
-                `Error processing file: "${filePath}"`,
-                err
-              );
+              log('error', `Error processing file: "${filePath}"`, err);
             });
         });
         if (fileProcessingPromises.length > 0) {
@@ -126,11 +121,13 @@ function populateGroup(directoryPath: string, group: FileGroup) {
                 };
               });
               group.thumbnailWidth = filesAndThumbnails.length * 200;
-              const compositeImages = filesAndThumbnails.map((thumbnail, index) => ({
-                input: thumbnail[1],
-                top: 0,
-                left: index * 200, // Adjust the position as needed
-              }));
+              const compositeImages = filesAndThumbnails.map(
+                (thumbnail, index) => ({
+                  input: thumbnail[1],
+                  top: 0,
+                  left: index * 200, // Adjust the position as needed
+                })
+              );
               if (!thumbnailHeight) thumbnailHeight = 200;
               sharp({
                 create: {
@@ -150,23 +147,18 @@ function populateGroup(directoryPath: string, group: FileGroup) {
                   resolve();
                 })
                 .catch((err) => {
-                  log(
-                    'server',
-                    'error',
-                    'Error creating composite image:',
-                    err
-                  );
+                  log('error', 'Error creating composite image:', err);
                   reject(err);
                 });
             })
             .catch((err) => {
-              log('server', 'error', 'Error processing files:', err);
+              log('error', 'Error processing files:', err);
               reject(err);
             });
         } else resolve();
       })
       .catch((err) => {
-        log('server', 'error', 'Error reading directory', err);
+        log('error', 'Error reading directory', err);
         reject(err);
       });
   });
@@ -175,7 +167,7 @@ function populateGroup(directoryPath: string, group: FileGroup) {
 export function renameGroup(oldName: string, newName: string) {
   const group = groups.find((g) => g.name === oldName);
   if (!group) {
-    log('server', 'error', `Group "${oldName}" not found.`);
+    log('error', `Group "${oldName}" not found.`);
     return;
   }
   const oldPath = path.join(groupDirectory, oldName);
@@ -183,17 +175,12 @@ export function renameGroup(oldName: string, newName: string) {
   fs.rename(oldPath, newPath)
     .then(() => {
       group.name = newName;
-      log('server', 'info', `Group "${oldName}" renamed to "${newName}".`);
+      log('info', `Group "${oldName}" renamed to "${newName}".`);
       groups.sort((a, b) => a.name.localeCompare(b.name));
       refreshGroups();
     })
     .catch((err) => {
-      log(
-        'server',
-        'error',
-        `Error renaming group "${oldName}" to "${newName}".`,
-        err
-      );
+      log('error', `Error renaming group "${oldName}" to "${newName}".`, err);
     });
 }
 
@@ -204,7 +191,7 @@ export function setSlideDelay(
 ) {
   const group = groups.find((g) => g.name === groupName);
   if (!group) {
-    log('server', 'error', `Group "${groupName}" not found.`);
+    log('error', `Group "${groupName}" not found.`);
     return;
   }
   group.slideDelay = delay;
@@ -214,7 +201,7 @@ export function setSlideDelay(
 export function repopulateGroup(groupName: string) {
   const group = groups.find((g) => g.name === groupName);
   if (!group) {
-    log('server', 'error', `Group "${groupName}" not found.`);
+    log('error', `Group "${groupName}" not found.`);
     return;
   }
   populateGroup(path.join(groupDirectory, groupName), group)
@@ -222,7 +209,7 @@ export function repopulateGroup(groupName: string) {
       refreshGroups();
     })
     .catch((err) => {
-      log('server', 'error', `Error repopulating group "${groupName}"`, err);
+      log('error', `Error repopulating group "${groupName}"`, err);
     });
 }
 
@@ -238,12 +225,12 @@ export function addGroup(groupName: string) {
         slideDelay: 5,
       };
       groups.push(group);
-      log('server', 'info', `Group "${groupName}" created.`);
+      log('info', `Group "${groupName}" created.`);
       groups.sort((a, b) => a.name.localeCompare(b.name));
       refreshGroups();
     })
     .catch((err) => {
-      log('server', 'error', `Error creating group "${groupName}"`, err);
+      log('error', `Error creating group "${groupName}"`, err);
     });
 }
 
@@ -254,36 +241,27 @@ export function removeSlide(groupName: string, slideName: string) {
     activeSlide[0] === groupName &&
     activeSlide[1] === slideName
   ) {
-    log('server', 'warn', 'Cannot delete active slide');
+    log('warn', 'Cannot delete active slide');
     return;
   }
   const group = groups.find((g) => g.name === groupName);
   if (!group) {
-    log('server', 'error', `Group "${groupName}" not found.`);
+    log('error', `Group "${groupName}" not found.`);
     return;
   }
   const slideIndex = group.files.findIndex((f) => f.name === slideName);
   if (slideIndex === -1) {
-    log(
-      'server',
-      'error',
-      `Slide "${slideName}" not found in group "${groupName}".`
-    );
+    log('error', `Slide "${slideName}" not found in group "${groupName}".`);
     return;
   }
   const slidePath = path.join(groupDirectory, groupName, slideName);
   fs.unlink(slidePath)
     .then(() => {
-      log(
-        'server',
-        'info',
-        `Slide "${slideName}" removed from group "${groupName}".`
-      );
+      log('info', `Slide "${slideName}" removed from group "${groupName}".`);
       repopulateGroup(groupName);
     })
     .catch((err) => {
       log(
-        'server',
         'error',
         `Error removing slide "${slideName}" from group "${groupName}".`,
         err
@@ -294,32 +272,27 @@ export function removeSlide(groupName: string, slideName: string) {
 export function removeGroup(groupName: string) {
   const activeSlide = getActiveSlide();
   if (activeSlide && activeSlide[0] === groupName) {
-    log('server', 'warn', 'Cannot delete active group');
+    log('warn', 'Cannot delete active group');
     return;
   }
   const group = groups.find((g) => g.name === groupName);
   if (!group) {
-    log('server', 'error', `Group "${groupName}" not found.`);
+    log('error', `Group "${groupName}" not found.`);
     return;
   }
   const groupPath = path.join(groupDirectory, groupName);
   fs.rm(groupPath, { recursive: true })
     .then(() => {
-      log('server', 'info', `Group "${groupName} removed".`);
+      log('info', `Group "${groupName} removed".`);
       initializeGroups()
         .then(() => {
           refreshGroups();
         })
         .catch((err) => {
-          log('server', 'error', 'Error reinitializing groups', err);
+          log('error', 'Error reinitializing groups', err);
         });
     })
     .catch((err) => {
-      log(
-        'server',
-        'error',
-        `Error removing group "${groupName}".`,
-        err
-      );
+      log('error', `Error removing group "${groupName}".`, err);
     });
 }
