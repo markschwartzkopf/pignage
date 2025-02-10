@@ -16,7 +16,8 @@
     "build:copycss": "cpy \"src/browser/**/*.css\" \"dist/browser/\" --parents",
     "build:copyico": "cpy \"src/browser/favicon.*\" \"dist/browser/\" --parents",
     "build:copysvg": "cpy \"src/browser/**/*.svg\" \"dist/browser/\" --parents",
-    "create-ico": "node ./favicon/make-favicon.js"
+    "create-ico": "node ./favicon/make-favicon.js",
+    "test-osc": "node ./testing/test-osc.js"
   },
   "repository": {
     "type": "git",

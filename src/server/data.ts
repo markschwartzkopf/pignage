@@ -30,14 +30,14 @@ export function initializeData() {
     .access(dataDir)
     .catch(() => {
       return fs.promises.mkdir(dataDir, { recursive: true }).catch((err) => {
-        log('server', 'error', 'Error creating data directory', err);
+        log('error', 'Error creating data directory', err);
       });
     })
     .then(() => {
       return fs.promises.readFile('./data/groupinfo.json');
     })
     .then((data) => {
-      log('server', 'info', 'reading group info file');
+      log('info', 'reading group info file');
       const groupInfo = JSON.parse(data.toString()) as typeof initGroupInfo;
       const groups = getGroups();
       Object.keys(groupInfo).forEach((key) => {
@@ -48,28 +48,28 @@ export function initializeData() {
       });
     })
     .catch(() => {
-      log('server', 'warn', 'Group info file does not exist. Creating it...');
+      log('warn', 'Group info file does not exist. Creating it...');
       fs.promises
         .writeFile(dataDir + '/groupinfo.json', JSON.stringify(initGroupInfo))
         .catch((err) => {
-          log('server', 'error', 'Error initializing group info:', err);
+          log('error', 'Error initializing group info:', err);
         });
     })
     .then(() => {
       return fs.promises.readFile('./data/stateinfo.json');
     })
     .then((data) => {
-      log('server', 'info', 'reading state info file');
+      log('info', 'reading state info file');
       const stateInfo = JSON.parse(data.toString()) as typeof initStateInfo;
       setActiveSlide(stateInfo.activeSlide);
       playGroup(stateInfo.playingGroup);
     })
     .catch(() => {
-      log('server', 'warn', 'State info file does not exist. Creating it...');
+      log('warn', 'State info file does not exist. Creating it...');
       fs.promises
         .writeFile(dataDir + '/stateinfo.json', JSON.stringify(initStateInfo))
         .catch((err) => {
-          log('server', 'error', 'Error initializing state info:', err);
+          log('error', 'Error initializing state info:', err);
         });
     });
 }
@@ -82,7 +82,7 @@ export function updateStateInfo() {
   fs.promises
     .writeFile('./data/stateinfo.json', JSON.stringify(stateInfo))
     .catch((err) => {
-      log('server', 'error', 'Error updating state info:', err);
+      log('error', 'Error updating state info:', err);
     });
 }
 
@@ -99,6 +99,6 @@ export function updateGroupInfo() {
   fs.promises
     .writeFile('./data/groupinfo.json', JSON.stringify(newGroupInfo))
     .catch((err) => {
-      log('server', 'error', 'Error updating group info:', err);
+      log('error', 'Error updating group info:', err);
     });
 }
