@@ -25,7 +25,6 @@ function buildOSCMessage(address, args) {
         return '';
       })
       .join('');
-  console.log('typeTagString:', typeTagString);
   const typeTagBuffer = pad(typeTagString);
 
   const argsBuffer = Buffer.concat(
@@ -52,7 +51,7 @@ function buildOSCMessage(address, args) {
 const client = net.createConnection({ host: '127.0.0.1', port: 53000 }, () => {
   console.log('Connected to OSC server.');
 
-  const oscMessage = buildOSCMessage('/test', [123, 'three', 5.3, 'decimal']);
+  const oscMessage = buildOSCMessage('/pause', []);
   client.write(oscMessage);
   console.log('OSC message sent.');
 
