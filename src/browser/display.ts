@@ -92,7 +92,7 @@ function setActiveSlide() {
     slideElement.style.backgroundImage = '';
     return;
   }
-  const url = ['groups', ...activeSlide].join('/');
+  const url = ['groups', ...activeSlide].join('/') + '?' + Date.now();
   const img = new Image();
   console.log('Loading image:', url);
   img.src = url;
@@ -103,7 +103,7 @@ function setActiveSlide() {
   };
   img.onerror = () => {
     log('error', `Error loading image: ${url}`);
-  };  
+  };
 }
 
 function sendMessage(message: ClientMessage) {

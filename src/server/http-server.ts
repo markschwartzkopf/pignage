@@ -195,6 +195,11 @@ export function initializeServer() {
             }
             break;
           }
+          //remove arguments
+          const queryIndex = filePath.indexOf('?');
+          if (queryIndex > -1) {
+            filePath = filePath.substring(0, queryIndex);
+          }
           const fileExtention = String(path.extname(filePath)).toLowerCase();
           let contentType = 'text/html';
           if (fileExtention in mimeTypes)
