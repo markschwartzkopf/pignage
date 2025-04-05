@@ -1,13 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { FileGroup } from '../global-types';
+import { FileGroup, PagesDir } from '../global-types';
 import sharp from 'sharp';
 import { log } from './logger';
-import { refreshGroups, getActiveSlide } from './http-server';
+import { refreshGroups, getActiveSlide, refreshPagesDir } from './http-server';
 
 const groupDirectory = path.join(__dirname, '../browser/groups');
+const pageDirectory = path.join(__dirname, '../browser/pages');
 
 const groups: FileGroup[] = [];
+let pagesDir: PagesDir = [];
 
 export function initializeGroups() {
   return fs
@@ -51,6 +53,56 @@ export function getGroups() {
   return JSON.parse(JSON.stringify(groups)) as FileGroup[];
 }
 
+export function initializePagesDir() {
+  return fs
+    .access(pageDirectory)
+    .catch(() => {
+      log('warn', 'Page directory does not exist. Creating it now.');
+      return fs.mkdir(pageDirectory);
+    })
+    .then(() => {
+      return fs.readdir(pageDirectory, { withFileTypes: true });
+    })
+    .then((dirents) => {
+      pagesDir = dirents
+        .filter((dirent) => dirent.isFile())
+        .map((dirent) => {
+          const extension = path.extname(dirent.name);
+          const isHtml =
+            extension.toLowerCase() === '.html' ||
+            extension.toLowerCase() === '.htm';
+          const filePath = path.join(pageDirectory, dirent.name);
+          return { name: dirent.name, path: filePath, isHtml };
+        });
+      refreshPagesDir();
+    })
+    .catch((err) => {
+      log('error', 'Error reading page directory:', err);
+    });
+}
+
+export function deletePagesFile(index: number, fileName: string) {
+  const file = pagesDir[index];
+  if (!file || file.name !== fileName) {
+    log(
+      'error',
+      `Unexpected pages deletion request: index ${index} does not match file "${fileName}". File at index: ${JSON.stringify(
+        file
+      )}`
+    );
+    return;
+  }
+  fs.unlink(file.path)
+    .then(() => {
+      log('info', `Deleted page file: "${fileName}"`);
+      pagesDir.splice(index, 1); // Remove the file from the array
+      refreshPagesDir(); // Refresh the pages directory in the server
+    })
+    .catch((err) => {
+      log('error', `Error deleting page file "${fileName}":`, err);
+    });
+}
+
 function getDirectories(path: string) {
   return new Promise<string[]>((resolve, reject) => {
     fs.readdir(path, { withFileTypes: true })
@@ -81,6 +133,10 @@ function getFiles(path: string) {
         reject(err);
       });
   });
+}
+
+export function getPagesDir() {
+  return JSON.parse(JSON.stringify(pagesDir)) as PagesDir;
 }
 
 function populateGroup(directoryPath: string, group: FileGroup) {

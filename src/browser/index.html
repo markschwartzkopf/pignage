@@ -134,14 +134,25 @@
       button:active {
         transform: scale(0.95); /* Add a subtle press effect */
       }
+      .page-file {
+        height: 1em;
+        line-height: 1em;
+        display: flex;
+        align-items: center;
+        justify-content: start;
+        gap: 0.2em;
+        margin: 0.2em 0;
+      }
     </style>
   </head>
   <body>
     <div class="header">Slide Groups</div>
     <div id="slide-groups"></div>
+    <div id="pages" class="slide-group"></div>
     <div class="centering-container">
       <button id="add-slide-group">Add Slide Group</button>
       <button id="go-black">Black</button>
+      <button id="upload-pages">Upload to HTML folder</button>
       <button id="reboot" style="display: none;">Reboot</button>
     </div>
     <div class="centering-container">

@@ -3,6 +3,7 @@ import {
   FileGroup,
   LogData,
   LogType,
+  PagesDir,
   ServerMessage,
   ServerMessageActiveSlide,
 } from '../global-types';
@@ -18,7 +19,47 @@ let activeSlideIndicator: HTMLElement | null = null;
 let trashDiv: HTMLElement | null = null;
 let activeSlide: ServerMessageActiveSlide['slide'] = 'black';
 let playingGroup: string | null = null;
+let pagesDir: PagesDir = [];
+let pagesDeleteMode = false;
 
+const pagesDiv = document.getElementById('pages') as HTMLDivElement;
+const uploadToHTML = document.getElementById(
+  'upload-pages'
+) as HTMLButtonElement;
+function uploadPages() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.onchange = async () => {
+    if (input.files) {
+      const uploadUrl = `${window.location.origin}/pages`;
+      console.log('Uploading files to:', uploadUrl);
+      const files = Array.from(input.files);
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('files', file);
+        try {
+          const response = await fetch(`${uploadUrl}/${file.name}`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (response.ok) {
+            alert('File uploaded successfully!');
+          } else {
+            log('error', `Failed to upload file: ${response.statusText}`);
+            alert('Failed to upload file');
+          }
+        } catch (err) {
+          log('error', 'Error uploading file:', err);
+          alert('An error occurred while uploading the file');
+        }
+      }
+    }
+  };
+  input.click();
+}
+uploadToHTML.onclick = uploadPages;
 const addSlideGroupButton = document.getElementById(
   'add-slide-group'
 ) as HTMLButtonElement;
@@ -84,8 +125,14 @@ function connect() {
             }
             break;
           }
+          case 'pagesDir': {
+            pagesDir = message.files;
+            populatePages();
+            break;
+          }
           default:
             log('error', 'Unknown message type:', message);
+            break;
         }
       } catch (err) {
         log('error', 'Error parsing message:', err);
@@ -102,7 +149,8 @@ setInterval(() => {
 }, 1000);
 
 function setActiveSlide() {
-  if (typeof activeSlide === 'string') {
+  populatePages();
+  if (typeof activeSlide === 'string') {    
     if (activeSlideIndicator) activeSlideIndicator.remove();
     activeSlideIndicator = null;
     return;
@@ -140,6 +188,126 @@ function setActiveSlide() {
       'error',
       `Requested slide not found: ${activeSlide[0]}/${activeSlide[1]}`
     );
+}
+
+function populatePages() {
+  pagesDiv.innerHTML = '';
+  if (pagesDir.length === 0) {
+    pagesDeleteMode = false;
+    uploadToHTML.style.display = '';
+    pagesDiv.style.display = 'none';
+    return;
+  }
+  uploadToHTML.style.display = 'none';
+  pagesDiv.style.display = '';
+
+  if (pagesDeleteMode) {
+    pagesDir.forEach((file, i) => {
+      const fileEl = document.createElement('div');
+      fileEl.classList.add('page-file');
+
+      const trashIcon = document.createElementNS(svgNS, 'svg');
+      trashIcon.classList.add('svg-icon', 'trash-icon');
+      trashIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      trashIcon.setAttribute('viewBox', '0 0 100 100');
+      trashIcon.setAttribute('fill', 'none');
+      trashIcon.setAttribute('stroke', '#ffffff');
+      trashIcon.setAttribute('stroke-width', '2');
+      trashIcon.innerHTML = trashSvg;
+      trashIcon.onclick = () => {
+        if (confirm(`Delete page "${file.name}"?`)) {
+          sendMessage({
+            type: 'removePagesFile',
+            index: i,
+            filename: file.name,
+          });
+        }
+      };
+      fileEl.appendChild(trashIcon);
+      const nameDiv = document.createElement('div');
+      nameDiv.textContent = file.name;
+      fileEl.appendChild(nameDiv);
+
+      pagesDiv.appendChild(fileEl);
+    });
+    const finishedDeletingButton = document.createElement('button');
+    finishedDeletingButton.textContent = 'Finished Deleting Files';
+    finishedDeletingButton.onclick = () => {
+      pagesDeleteMode = false;
+      populatePages();
+    };
+    pagesDiv.appendChild(finishedDeletingButton);
+  } else {
+    const header = document.createElement('div');
+    header.classList.add('group-header');
+    const title = document.createElement('div');
+    title.textContent = 'HTML Pages';
+    header.appendChild(title);
+    const uploadIcon = document.createElementNS(svgNS, 'svg');
+    uploadIcon.classList.add('svg-icon');
+    uploadIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    uploadIcon.setAttribute('viewBox', '0 0 40 40');
+    uploadIcon.setAttribute('fill', 'none');
+    uploadIcon.setAttribute('stroke', '#ffffff');
+    uploadIcon.setAttribute('stroke-width', '2');
+    uploadIcon.innerHTML = uploadIconSvg;
+    uploadIcon.onclick = uploadPages;
+    header.appendChild(uploadIcon);
+    const trashIcon = document.createElementNS(svgNS, 'svg');
+    trashIcon.classList.add('svg-icon');
+    trashIcon.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    trashIcon.setAttribute('viewBox', '0 0 100 100');
+    trashIcon.setAttribute('fill', 'none');
+    trashIcon.setAttribute('stroke', '#ffffff');
+    trashIcon.setAttribute('stroke-width', '2');
+    trashIcon.innerHTML = trashSvg;
+    trashIcon.onclick = () => {
+      pagesDeleteMode = true;
+      populatePages();
+    };
+    header.appendChild(trashIcon);
+    pagesDiv.appendChild(header);
+    pagesDir.forEach((file) => {
+      if (file.isHtml) {
+        const iframeWrapper = document.createElement('div');
+        iframeWrapper.style.width = '16em';
+        iframeWrapper.style.height = '9em';
+        iframeWrapper.style.position = 'relative';
+        const pageiframe = document.createElement('iframe');
+        pageiframe.src = 'pages/' + file.name;
+        pageiframe.style.position = 'absolute';
+        pageiframe.style.width = '100%';
+        pageiframe.style.height = '100%';
+        pageiframe.style.border = 'none';
+        pageiframe.style.margin = '0';
+        pageiframe.onclick = () => {
+          console.log('click');
+        };
+        iframeWrapper.appendChild(pageiframe);
+        const iframeClicker = document.createElement('div');
+        iframeClicker.style.position = 'absolute';
+        iframeClicker.style.top = '0';
+        iframeClicker.style.left = '0';
+        iframeClicker.style.width = '100%';
+        iframeClicker.style.height = '100%';
+        iframeClicker.style.cursor = 'pointer';
+        iframeClicker.onclick = () => {
+          sendMessage({
+            type: 'activeSlide',
+            slide: file.name,
+          });
+        };
+        if (
+          typeof activeSlide === 'string' &&
+          activeSlide.split('?')[0] === file.name
+        ) {
+          iframeClicker.style.border = '0.5vh solid white';
+        }
+        iframeWrapper.appendChild(iframeClicker);
+        pagesDiv.appendChild(iframeWrapper);
+      }
+    });
+  }
 }
 
 function populateGroups() {
@@ -188,7 +356,7 @@ function populateGroups() {
       input.multiple = true;
       input.onchange = async () => {
         if (input.files) {
-          const uploadUrl = `${window.location.origin}/${group.name}`;
+          const uploadUrl = `${window.location.origin}/groups/${group.name}`;
           console.log('Uploading files to:', uploadUrl);
           const files = Array.from(input.files);
           for (const file of files) {

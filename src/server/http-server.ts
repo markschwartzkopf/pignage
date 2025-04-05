@@ -3,6 +3,7 @@ import fs from 'fs';
 //import { exec } from 'child_process';
 import os from 'os';
 import path from 'path';
+import busboy from 'busboy';
 import { WebSocket } from 'ws';
 import {
   ClientMessage,
@@ -11,7 +12,10 @@ import {
 } from '../global-types';
 import {
   addGroup,
+  deletePagesFile,
   getGroups,
+  getPagesDir,
+  initializePagesDir,
   removeGroup,
   removeSlide,
   renameGroup,
@@ -92,43 +96,41 @@ export function initializeServer() {
       switch (req.method) {
         case 'POST': {
           const filePath = '.' + req.url;
-          const localPath = path.join(STATIC_PATH, 'groups', filePath);
-          console.log(`File upload request: ${localPath}`);
+          const localPath = path.join(STATIC_PATH, filePath);
+          const dir = filePath.split('/')[1];
+          if (dir !== 'groups' && dir !== 'pages') {
+            log('error', `Invalid upload directory: ${dir}`);
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end(
+              'Invalid upload directory. Only "groups" or "pages" allowed.'
+            );
+            return;
+          }
           if (!req.headers['content-type']) {
             res.writeHead(400, { 'Content-Type': 'text/plain' });
             res.end('No content type header found');
             break;
           }
-          const chunks: Buffer[] = [];
+          const bb = busboy({ headers: req.headers });
 
-          req.on('data', (chunk) => {
-            chunks.push(chunk);
+          bb.on('file', (name, file) => {
+            file.pipe(fs.createWriteStream(localPath));
           });
-          req.on('end', () => {
-            const buffer = Buffer.concat(chunks);
-            const headerEndIndex = buffer.indexOf('\r\n\r\n') + 4;
-            const fileBuffer = buffer.subarray(headerEndIndex);
-            fs.promises
-              .writeFile(localPath, fileBuffer)
-              .then(() => {
-                repopulateGroup(filePath.split('/')[1]);
-                log('info', 'File upload complete');
-                res.writeHead(200, { 'Content-Type': 'text/plain' });
-                res.end('File uploaded successfully');
-              })
-              .catch((err) => {
-                log('error', `Error writing file: ${err}`);
-                res.writeHead(500, { 'Content-Type': 'text/plain' });
-                res.end('Error writing file');
+          bb.on('close', () => {
+            res.writeHead(200, { 'Connection': 'close' });
+            res.end(`File uploaded successfully`);
+            if (dir === 'groups') {
+              console.log( `Repopulating group. Added: ${filePath}`);
+              repopulateGroup(filePath.split('/')[2]);
+              log('info', 'File upload complete');
+            } else {
+              console.log(`Reinitializing Pages dir. Added: ${filePath}`);
+              initializePagesDir().catch((err) => {
+                log('error', `Error initializing pages directory: ${err}`);
               });
+            }
           });
-
-          req.on('error', (err) => {
-            log('error', `Error receiving file: ${JSON.stringify(err)}`);
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('Error uploading file');
-          });
-
+          req.pipe(bb);
           break;
         }
         case 'GET': {
@@ -208,6 +210,8 @@ export function initializeServer() {
           fs.promises
             .readFile(localPath)
             .then((buf) => {
+              /* console.log(localPath);
+              console.log(buf.subarray(-1000).toString('utf-8')); // Log last 100 bytes for debugging */
               res.writeHead(200, { 'Content-Type': contentType });
               if (slowMode) {
                 const chunkSize = 1024; // 1KB per chunk
@@ -255,6 +259,7 @@ export function initializeServer() {
         sendMessage({ type: 'playingGroup', group: playingGroup }, ws);
         sendMessage({ type: 'ipAddress', address: getLocalIP() }, ws);
         sendMessage({ type: 'canReboot', canReboot: canReboot }, ws);
+        sendMessage({ type: 'pagesDir', files: getPagesDir() }, ws);
         ws.on('message', (message) => {
           try {
             const msg = JSON.parse(message.toString()) as ClientMessage;
@@ -312,6 +317,10 @@ export function initializeServer() {
                   exec('sudo reboot');
                 }
                 break;
+              case 'removePagesFile': {
+                deletePagesFile(msg.index, msg.filename);
+                break;
+              }
               default:
                 log('error', `Unknown message type: ${JSON.stringify(msg)})`);
             }
@@ -464,6 +473,10 @@ export function getActiveSlide() {
 export function refreshGroups() {
   updateGroupInfo();
   sendMessage({ type: 'groups', groups: getGroups() });
+}
+
+export function refreshPagesDir() {
+  sendMessage({ type: 'pagesDir', files: getPagesDir() });
 }
 
 function getLocalIP() {

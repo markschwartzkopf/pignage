@@ -25,14 +25,19 @@ export type ServerIpAddress = {
 export type ServerMessageCanReboot = {
   type: 'canReboot';
   canReboot: boolean;
-}
+};
+export type ServerMessagePagesDir = {
+  type: 'pagesDir';
+  files: PagesDir;
+};
 
 export type ServerMessage =
   | ServerMessageGroups
   | ServerMessageActiveSlide
   | ServerMessagePlayingGroup
   | ServerIpAddress
-  | ServerMessageCanReboot;
+  | ServerMessageCanReboot
+  | ServerMessagePagesDir;
 
 type file = {
   name: string;
@@ -75,6 +80,12 @@ export type ClientMessageRemoveGroup = {
 };
 export type ClientMessageShowColor = { type: 'showColor'; color: string };
 export type ClientMessageReboot = { type: 'reboot' };
+type ClientMessageRemovePagesFile = {
+  type: 'removePagesFile';
+  index: number;
+  filename: string;
+}
+
 
 export type ClientMessage =
   | ClientMessageActiveSlide
@@ -86,4 +97,11 @@ export type ClientMessage =
   | ClientMessageRemoveSlide
   | ClientMessageRemoveGroup
   | ClientMessageShowColor
-  | ClientMessageReboot;
+  | ClientMessageReboot
+  | ClientMessageRemovePagesFile;
+
+export type PagesDir = {
+  name: string;
+  path: string;
+  isHtml: boolean;
+}[];

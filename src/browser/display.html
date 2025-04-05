@@ -51,11 +51,35 @@
         background-repeat: no-repeat;
         background-position: center;
       }
+      #page {
+        width: 100vw;
+        height: 56.25vw; /* 16:9 aspect ratio */
+        border: none;
+        display: none;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        left: 0;
+      }
+      #page.inside-iframe {
+        width: 80vw;
+        height: 45vw; /* 16:9 aspect ratio for inside iframe */
+      }
+      #mouse-tracker {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
     </style>
   </head>
   <body>
     <div id="ip-address"></div>
     <div id="slide"></div>
+    <iframe id="page"></iframe>
+    <div id="mouse-tracker"></div>
   </body>
   <script>
     let exports = {};
