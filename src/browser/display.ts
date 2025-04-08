@@ -111,7 +111,7 @@ function setActiveSlide() {
       document.body.style.backgroundColor = '';
     } else {
       document.body.style.backgroundColor = activeSlide;
-      iframe.style.display = 'block';
+      iframe.style.display = 'none';
     }
     slideElement.style.backgroundImage = '';
     return;
